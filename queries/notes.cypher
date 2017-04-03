@@ -19,6 +19,7 @@ UNWIND tuples AS tuple
 
 MATCH (a:Stem {lru: tuple.first.lru})
 MERGE (a)<-[:PARENT]-(b:Stem {lru: tuple.second.lru})
-  ON CREATE SET b.type = tuple.second.type
-  ON CREATE SET b.stem = tuple.second.stem
+  ON CREATE SET
+    b.type = tuple.second.type,
+    b.stem = tuple.second.stem
 FOREACH (_ IN CASE WHEN tuple.second.page THEN [1] ELSE [] END | SET b:Page);
