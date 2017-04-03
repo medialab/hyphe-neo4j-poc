@@ -13,6 +13,9 @@ CREATE CONSTRAINT ON (s:Stem) ASSERT s.lru IS UNIQUE;
 // Startup query creating basic nodes & defining indices
 MERGE (:Stem {lru: ""});
 
+// name: drop_db
+MATCH (n) DETACH DELETE n;
+
 // name: index
 // Indexing a list of LRUs
 UNWIND $lrus AS stems
@@ -25,5 +28,6 @@ MERGE (b:Stem {lru: tuple.second.lru})
 MERGE (a)<-[:PARENT]-(b)
   ON CREATE SET
     b.type = tuple.second.type,
-    b.stem = tuple.second.stem
+    b.stem = tuple.second.stem,
+    b.createdTimestamp = timestamp()
 FOREACH (_ IN CASE WHEN tuple.second.page THEN [1] ELSE [] END | SET b:Page);

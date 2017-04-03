@@ -53,12 +53,16 @@ def read_query(session, query, **kwargs):
     return session.read_transaction(lambda tx: tx.run(query, **kwargs))
 
 def init_neo4j(session, queries):
+    write_query(session, queries["drop_db"])
     write_query(session, queries["constrain_lru"])
     write_query(session, queries["startup"])
 
 def run_load(session, queries):
-    lru = "s:https|h:fr|h:sciencespo|h:medialab|p:tonpere|q:enslip"
-    a = write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru)])
+    lrus = ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+           "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
+           's:http|h:com|h:twitter|p:medialab_ScPo|',
+           's:http|h:com|h:twitter|p:paulanomalie|']
+    a = write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru) for lru in lrus])
     print(a._summary.counters.__dict__)
 
 
