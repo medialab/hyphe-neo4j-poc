@@ -13,7 +13,7 @@ MERGE (root:Root:Stem {lru: ""});
 // name: index
 // Indexing a list of LRUs
 UNWIND $lrus AS stems
-WITH extract(s IN stems | [{lru: "", root: true}] + s) AS stems
+WITH [{lru: "", root: true}] + stems AS stems
 WITH extract(n IN range(1, size(stems) - 1) | {first: stems[n - 1], second: stems[n]}) AS tuples
 UNWIND tuples AS tuple
 
