@@ -46,10 +46,16 @@ def lru_to_stemnodes_bigrams(lru):
     stems = lru_to_stemnodes(lru)
     return zip(stems, stems[1:])
 
+def prepare_query(query, **kwargs):
+    return lambda tx: tx.run(query, **kwargs)
+
+def init_neo4j(session, queries):
+    session.write_transaction(prepare_query(queries["startup"]))
+
 def run_load(session, queries):
     lru = "s:http|h:fr|h:sciences-po|h:medialab|"
-    #session.write_transaction(queries["index"], {lrus: [lru_to_stemnodes(lru)]})
-    #session.write_transaction(queries["index"], {lrus: [lru_to_stemnodes(lru)]})
+    session.write_transaction(prepare_query(queries["index"], lrus=[lru_to_stemnodes(lru)]))
+    session.write_transaction(prepare_query(queries["index"], lrus=[lru_to_stemnodes(lru)]))
 
 
 if __name__ == "__main__":
@@ -58,8 +64,12 @@ if __name__ == "__main__":
     except:
         sys.stderr.write("ERROR: please create & fill config.py from config.py.example first")
         exit(1)
-    neo4jdriver = GraphDatabase.driver("bolt://%s:%s" % (neo4j_host, neo4j_port), auth=(neo4j_user, neo4j_pass))
+
     with open("queries/notes.cypher") as f:
         queries = read_queries_file(f)
+
+    neo4jdriver = GraphDatabase.driver("bolt://%s:%s" % (neo4j_host, neo4j_port), auth=(neo4j_user, neo4j_pass))
     with neo4jdriver.session() as session:
+        init_neo4j(session, queries)
         run_load(session, queries)
+
