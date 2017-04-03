@@ -46,15 +46,19 @@ def lru_to_stemnodes_bigrams(lru):
     stems = lru_to_stemnodes(lru)
     return zip(stems, stems[1:])
 
-def run_query(session, query, **kwargs):
+def write_query(session, query, **kwargs):
     return session.write_transaction(lambda tx: tx.run(query, **kwargs))
 
+def read_query(session, query, **kwargs):
+    return session.read_transaction(lambda tx: tx.run(query, **kwargs))
+
 def init_neo4j(session, queries):
-    run_query(session, queries["startup"])
+    write_query(session, queries["constrain_lru"])
+    write_query(session, queries["startup"])
 
 def run_load(session, queries):
-    lru = "s:https|h:fr|h:sciencespo|h:medialab|p:people|"
-    a = run_query(session, queries["index"], lrus=[lru_to_stemnodes(lru)])
+    lru = "s:https|h:fr|h:sciencespo|h:medialab|p:tonpere|q:enslip"
+    a = write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru)])
     print(a._summary.counters.__dict__)
 
 
