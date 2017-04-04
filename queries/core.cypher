@@ -30,6 +30,7 @@ FOREACH (_ IN CASE WHEN NOT coalesce(tuple.second.page, false) THEN [1] ELSE [] 
       b.createdTimestamp = timestamp()
   MERGE (a)<-[:PARENT]-(b)
 )
+
 FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END |
   MERGE (a:Stem {lru: tuple.first.lru})
   MERGE (b:Stem {lru: tuple.second.lru})
@@ -37,6 +38,23 @@ FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END 
       b.type = tuple.second.type,
       b.stem = tuple.second.stem,
       b.createdTimestamp = timestamp(),
+      b.crawledTimestamp = tuple.second.crawlTimestamp,
+      b.crawlDepth = tuple.second.crawlDepth,
+      b.crawlError = tuple.second.crawlError,
+      b.crawlHTTPCode = tuple.second.crawlHTTPCode,
+      b.pageEncoding = tuple.second.pageEncoding,
+      b.crawled = coalesce(tuple.second.crawled, false),
+      b.linked = coalesce(tuple.second.linked, false),
+      b:Page
+    ON MATCH SET
+      b.crawlDepth =
+        CASE
+          WHEN tuple.second.crawlDepth < b.crawlDepth
+          THEN tuple.second.crawlDepth
+          ELSE b.crawlDepth
+          END,
+      b.crawled = coalesce(tuple.second.crawled, b.crawled),
+      b.linked = coalesce(tuple.second.linked, b.linked),
       b:Page
   MERGE (a)<-[:PARENT]-(b)
 );
