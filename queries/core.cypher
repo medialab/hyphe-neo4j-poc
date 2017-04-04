@@ -60,23 +60,33 @@ FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END 
 );
 
 // name: we_default_creation_rule
-// Default web entity creation rule.
 MATCH (s:Stem)
-WHERE
+WHERE 
   s.createdTimestamp > $lastcheck AND
   NOT ((s)-[:PREFIX]->(:WebEntity)) AND
-  s.lru =~ 's:[a-zA-Z]+\\|(t:[0-9]+\\|)?(h:[^\\|]+\\|(h:[^\\|]+\\|)+|h:(localhost|(\\d{1,3}\\.){3}\\d{1,3}|\\[[\\da-f]*:[\\da-f:]*\\])\\|)'
+  (
+    (s {type:'Host'})-[:PARENT]->(:Stem {type:'Host'})-[:PARENT]->(:Stem {type:'Scheme'})
+    OR
+    (
+      (s {type:'Host'})-[:PARENT]->(:Stem {type:'Scheme'}) AND
+      NOT (:Stem {type:'Host'})-[:PARENT]->(s)
+    )
+    OR
+    (
+      (s {type:'Path'})-[:PARENT]->(:Stem {lru:'s:http|h:com|h:twitter|'})
+    )
+  )
 RETURN s
 
 // name: create_wes
-// [[lru1,lru2,lru3,lru4],...]
-UNWIND $webentities AS we
-WITH we.name AS weName, we.prefixes AS prefixes
+UNWIND $webentities as we
+WITH we.name as weName, we.prefixes as prefixes
 MERGE (we:WebEntity {name:weName})
-WITH we, prefixes
-UNWIND prefixes AS prefixe
-MERGE (s:Stem {lru:prefixe})
-WITH we,s
-MATCH (s)
+with we, prefixes
+UNWIND prefixes as prefixe
+with we,prefixe
+MATCH (s:Stem {lru:prefixe})
 WHERE NOT (s)-[:PREFIX]->()
 CREATE (we)<-[:PREFIX]-(s)
+
+

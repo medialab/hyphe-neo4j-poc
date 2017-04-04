@@ -97,13 +97,17 @@ def load_lrus(session, queries, pages=[]):
 
 def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
+    lrus = [we_prefixe[0].properties['lru'] for we_prefixe in we_prefixes]
     webentities=[]
-    for we_prefixe in we_prefixes:
-      lru = we_prefixe[0].properties['lru']
+    lrusToCreate=[]
+    for lru in lrus:
       we = {}
       we['prefixes']=get_alternative_prefixes(lru)
+      lrusToCreate+=we['prefixes']
       we['name']=name_lru(lru)
       webentities.append(we)
+
+    write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru) for lru in lrusToCreate])
     result = write_query(session, queries["create_wes"], webentities=webentities)
     print(result._summary.counters.__dict__)
 
