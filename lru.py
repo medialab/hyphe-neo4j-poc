@@ -22,7 +22,7 @@ def clean_lru(lru):
         if not stem in ['t:80', ':443']
     ]) + "|"
 
-def get_alternative_prefixes(lru):
+def get_alt_prefixes(lru):
     stems = split_lru_in_stems(lru)
     schemes = [s for s in stems if s[0] == 's']
     hosts = [s  for s in stems if s[0] == 'h']
@@ -37,7 +37,7 @@ def get_alternative_prefixes(lru):
         if s[1] == 'http':
             s[1] = 'https'
         elif s[1] == 'https':
-            s[1] = 'http'  
+            s[1] = 'http'
         altSchemes.append(s)
     altHosts = []
     if len(hosts)>1:

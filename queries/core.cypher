@@ -1,3 +1,7 @@
+// name: drop_db
+// Handy query truncating the whole Neo4j database.
+MATCH (n) DETACH DELETE n;
+
 // name: constrain_lru
 // Creating a uniqueness constraint on the stems' LRUs.
 CREATE CONSTRAINT ON (s:Stem) ASSERT s.lru IS UNIQUE;
@@ -14,11 +18,7 @@ CREATE INDEX ON :Stem(type);
 // Startup query creating basic nodes such as the ROOT.
 MERGE (:Stem {lru: "", stem: "ROOT"});
 
-// name: drop_db
-// Handy query truncating the whole Neo4j database.
-MATCH (n) DETACH DELETE n;
-
-// name: index
+// name: index_lrus
 // Indexing a batch of LRUs represented as lists of stems.
 UNWIND $lrus AS stems
 WITH [{lru: ""}] + stems AS stems
@@ -63,6 +63,12 @@ FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END 
   MERGE (a)<-[:PARENT]-(b)
 );
 
+// name: index_links
+UNWIND $links as link
+MATCH (a:Stem {lru:link[0]})
+MATCH (b:Stem {lru:link[1]})
+CREATE (a)-[:LINK]->(b);
+
 // name: we_default_creation_rule
 MATCH (s:Stem)
 WHERE 
@@ -91,10 +97,5 @@ UNWIND prefixes as prefixe
 with we,prefixe
 MATCH (s:Stem {lru:prefixe})
 WHERE NOT (s)-[:PREFIX]->()
-CREATE (we)<-[:PREFIX]-(s)
+CREATE (we)<-[:PREFIX]-(s);
 
-// name:index_links
-UNWIND $links as link
-MATCH (a:Stem {lru:link[0]})
-MATCH (b:Stem {lru:link[1]})
-CREATE (a)-[:LINK]->(b)
