@@ -89,4 +89,8 @@ MATCH (s:Stem {lru:prefixe})
 WHERE NOT (s)-[:PREFIX]->()
 CREATE (we)<-[:PREFIX]-(s)
 
-
+// name:index_links
+UNWIND $links as link
+MATCH (a:Stem {lru:link[0]})
+MATCH (b:Stem {lru:link[1]})
+CREATE (a)-[:LINK]->(b)
