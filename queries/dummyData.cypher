@@ -20,4 +20,3 @@ CREATE (root)<-[:parent]-
 		(:STEM:HOST {stem:'p:medialab_ScPo' ,lru:'s:http|h:com|h:twitter|p:medialab_ScPo'})
 
 match (n)-[r]-(m) return n,r,m;
-

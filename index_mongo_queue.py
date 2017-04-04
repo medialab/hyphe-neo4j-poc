@@ -36,8 +36,7 @@ def lru_to_stemnodes(lru):
         stems.append({
           "lru": sublru,
           "type": types[typ],
-          "stem": stem,
-          "page": False
+          "stem": stem
         })
     stems[-1]["page"] = True
     return stems
@@ -65,6 +64,10 @@ def run_load(session, queries):
     a = write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru) for lru in lrus])
     print(a._summary.counters.__dict__)
 
+def run_WE_creation_rule(session, queries, lastcheck):
+    prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
+    print prefixes
+
 
 if __name__ == "__main__":
     try:
@@ -78,6 +81,7 @@ if __name__ == "__main__":
 
     neo4jdriver = GraphDatabase.driver("bolt://%s:%s" % (neo4j_host, neo4j_port), auth=(neo4j_user, neo4j_pass))
     with neo4jdriver.session() as session:
-        init_neo4j(session, queries)
-        run_load(session, queries)
+        run_WE_creation_rule(session, queries, 0)
+        #init_neo4j(session, queries)
+        #run_load(session, queries)
 
