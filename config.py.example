@@ -1,9 +1,13 @@
-neo4j_host = "localhost"
-neo4j_port = 7687
-neo4j_user = neo4j
-neo4j_pass = neo4j
-mongo_host = "localhost"
-mongo_port = 27017
-mongo_base = "hyphe"
-mongo_coll = "corpus.pages"
-page_batch = 10000
+neo4j_conf = {
+ _"host": "localhost",
+  "port": 7687,
+  "user": "neo4j",
+  "pass": "neo4j"
+}
+mongo_conf = {
+  "host": "localhost",
+  "port": 27017,
+  "base": "hyphe",
+  "coll": "corpus.pages"
+}
+lrus_batch_size = 50000
