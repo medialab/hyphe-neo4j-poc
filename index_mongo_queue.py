@@ -9,17 +9,6 @@ from neo4j.v1 import GraphDatabase
 from warnings import filterwarnings
 filterwarnings(action='ignore', category=UserWarning, message="Bolt over TLS is only available")
 
-# STEM NODE:
-# - LRU: string
-# - type: enum(s,h,t,p,q,f)
-# - stem:
-# - page: boolean
-# - page_timestamp: int
-# - page_http_code: integer
-# - page_encoding: string
-# - page_error: string
-# - page_crawl_depth: integer
-# - page_sources: enum(crawl,link,both) =>
 types = {
   "s": "Scheme",
   "h": "Host",
@@ -70,7 +59,9 @@ def read_query(session, query, **kwargs):
 def init_neo4j(session, queries):
     write_query(session, queries["drop_db"])
     write_query(session, queries["constrain_lru"])
-    write_query(session, queries["startup"])
+    write_query(session, queries["stem_timestamp_index"])
+    write_query(session, queries["stem_type_index"])
+    write_query(session, queries["create_root"])
 
 def load_lrus(session, queries, pages=[]):
     if not pages:
