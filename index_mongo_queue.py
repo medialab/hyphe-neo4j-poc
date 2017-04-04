@@ -4,6 +4,7 @@
 import sys, re
 from lru import split_lru_in_stems, clean_lru
 from read_queries import read_queries_file
+from pymongo import MongoClient
 from neo4j.v1 import GraphDatabase
 from warnings import filterwarnings
 filterwarnings(action='ignore', category=UserWarning, message="Bolt over TLS is only available")
@@ -56,8 +57,9 @@ def init_neo4j(session, queries):
     write_query(session, queries["constrain_lru"])
     write_query(session, queries["startup"])
 
-def run_load(session, queries):
-    lrus = ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+def load_lrus(session, queries, lrus=[]):
+    if not lrus:
+        lrus = ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
            "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
            's:http|h:com|h:twitter|p:medialab_ScPo|',
            's:http|h:com|h:twitter|p:paulanomalie|']
@@ -66,22 +68,41 @@ def run_load(session, queries):
 
 def run_WE_creation_rule(session, queries, lastcheck):
     prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
-    print prefixes
+    print [p[0].properties["lru"] for p in prefixes]
 
 
 if __name__ == "__main__":
+    # Load config
     try:
-        from config import neo4j_host, neo4j_port, neo4j_user, neo4j_pass
+        import config as cf
     except:
         sys.stderr.write("ERROR: please create & fill config.py from config.py.example first")
         exit(1)
 
+    # MongoDB Connection
+    mongoconn = MongoClient(cf.mongo_host, cf.mongo_port)[cf.mongo_base][cf.mongo_coll]
+
+    # Read Neo4J Queries file
     with open("queries/notes.cypher") as f:
         queries = read_queries_file(f)
 
-    neo4jdriver = GraphDatabase.driver("bolt://%s:%s" % (neo4j_host, neo4j_port), auth=(neo4j_user, neo4j_pass))
+    # Neo4J Connection
+    neo4jdriver = GraphDatabase.driver("bolt://%s:%s" % (cf.neo4j_host, cf.neo4j_port), auth=(cf.neo4j_user, cf.neo4j_pass))
     with neo4jdriver.session() as session:
+        # ResetDB
+        if len(sys.argv) > 1:
+            init_neo4j(session, queries)
+        print mongoconn.count()
+        lrus = []
+        total = 0
+        for page in mongoconn.find({}):
+            lrus += [page["lru"]] + page["lrulinks"]
+            if len(lrus) >= cf.page_batch:
+                load_lrus(session, queries, lrus)
+                total += len(lrus)
+                lrus = []
+        load_lrus(session, queries, lrus)
+        total += len(lrus)
         run_WE_creation_rule(session, queries, 0)
-        #init_neo4j(session, queries)
-        #run_load(session, queries)
+        print total
 
