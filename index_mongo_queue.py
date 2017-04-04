@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, re
+from time import time
 from lru import split_lru_in_stems, get_alt_prefixes, name_lru, clean_lru
 from read_queries import read_queries_file
 from pymongo import MongoClient
@@ -47,20 +48,21 @@ def lru_to_stemnodes(lru):
 
 def prepare_lrus(lru, lruLinks, crawlMetas={}):
     lrus = []
+    now = int(time())
 
     lrus.append(lru_to_stemnodes(lru))
     lrus[-1][-1]["crawled"] = True
-    lrus[-1][-1]["crawlDepth"] = crawlMetas["depth"]
-    lrus[-1][-1]["crawlTimestamp"] = crawlMetas["timestamp"]
-    lrus[-1][-1]["crawlHTTPCode"] = crawlMetas["status"]
-    lrus[-1][-1]["crawlError"] = crawlMetas["error"]
-    lrus[-1][-1]["pageEncoding"] = crawlMetas["encoding"]
+    lrus[-1][-1]["crawlDepth"] = crawlMetas.get("depth", 0)
+    lrus[-1][-1]["crawlTimestamp"] = crawlMetas.get("timestamp", now)
+    lrus[-1][-1]["crawlHTTPCode"] = crawlMetas.get("status", 200)
+    lrus[-1][-1]["crawlError"] = crawlMetas.get("error", None)
+    lrus[-1][-1]["pageEncoding"] = crawlMetas.get("encoding", "utf-8")
 
     for link in lruLinks:
         lrus.append(lru_to_stemnodes(link))
         lrus[-1][-1]["linked"] = True
-        lrus[-1][-1]["crawlDepth"] = crawlMetas["depth"] + 1
-        lrus[-1][-1]["crawlTimestamp"] = crawlMetas["timestamp"]
+        lrus[-1][-1]["crawlDepth"] = crawlMetas.get("depth", 0) + 1
+        lrus[-1][-1]["crawlTimestamp"] = crawlMetas.get("timestamp", now)
 
     return lrus
 
@@ -78,7 +80,7 @@ def load_pages_batch(session, queries, pages=[], links=[]):
             "depth": 0,
             "error": None,
             "status": 200,
-            "timestamp": 1472238151623
+            "timestamp": int(time.time())
           }
         )]
 
