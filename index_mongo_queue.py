@@ -66,7 +66,7 @@ def load_lrus(session, queries, lrus=[]):
     a = write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru) for lru in lrus])
     print(a._summary.counters.__dict__)
 
-def run_WE_creation_rule(session, queries, lastcheck):  
+def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
     webentities=[]
     for we_prefixe in we_prefixes:
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     mongoconn = MongoClient(cf.mongo_host, cf.mongo_port)[cf.mongo_base][cf.mongo_coll]
 
     # Read Neo4J Queries file
-    with open("queries/notes.cypher") as f:
+    with open("queries/core.cypher") as f:
         queries = read_queries_file(f)
 
     # Neo4J Connection
@@ -113,4 +113,3 @@ if __name__ == "__main__":
         total += len(lrus)
         run_WE_creation_rule(session, queries, 0)
         print total
-
