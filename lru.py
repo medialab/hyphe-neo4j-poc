@@ -22,3 +22,72 @@ def clean_lru(lru):
         if not stem in ['t:80', ':443']
     ]) + "|"
 
+def get_alternative_prefixes(lru):
+    stems = split_lru_in_stems(lru)
+    schemes = [s for s in stems if s[0] == 's']
+    hosts = [s  for s in stems if s[0] == 'h']
+    ports = [s for s in stems if s[0] == 't']
+    paths = [s for s in stems if s[0] == 'p']
+    queries = [s for s in stems if s[0] == 'q']
+    fragments = [s for s in stems if s[0] == 'f']
+
+    altSchemes = []
+    for s in schemes :
+        s = list(s)
+        if s[1] == 'http':
+            s[1] = 'https'
+        elif s[1] == 'https':
+            s[1] = 'http'  
+        altSchemes.append(s)
+    altHosts = []
+    if len(hosts)>1:
+        if 'www' in [h[1] for h in hosts] :
+            altHosts = [h for h in hosts if h[1] != 'www']
+        else:
+            altHosts = [h for h in hosts]
+            altHosts.append(('h','www','h:www'))
+
+    prefixes = [lru]
+    # alternative alt scheme, same host
+    prefixes.append("|".join(":".join(s[0:2]) for s in altSchemes + ports + hosts + paths + queries + fragments)+"|")
+    if len(altHosts)>1:
+        # alternative same scheme, alt host
+        prefixes.append("|".join(":".join(s[0:2]) for s in schemes + ports + altHosts + paths + queries + fragments)+"|")
+        # alternative alt scheme, alt host
+        prefixes.append("|".join(":".join(s[0:2]) for s in altSchemes + ports + altHosts + paths + queries + fragments)+"|")
+    return prefixes
+
+def name_lru(lru):
+    host = []
+    path = ""
+    name = ""
+    lasthost = ""
+    pathdone = False
+    for (k,v,_) in split_lru_in_stems(lru):
+        if k == "h" and v != "www":
+            lasthost = v.title()
+            if host or len(lasthost) > 3:
+                host.insert(0, lasthost)
+        elif k == "p" and v:
+            path = " %s/%s" % ("/..." if pathdone else "", v)
+            pathdone = True
+        elif k == "q" and v:
+            name += ' ?%s' % v
+        elif k == "f" and v:
+            name += ' #%s' % v
+    if not host and lasthost:
+        host = [lasthost]
+    return ".".join(host) + path + name
+
+
+
+if __name__ == "__main__":
+    lrus = ["s:http|h:fr|h:sciences-po|h:medialab|",
+       's:https|h:com|h:twitter|p:paulanomalie|',
+       's:https|h:192.168.0.1|p:paulanomalie|'
+       ]
+    for lru in lrus:
+        print "prefixes for %s :"%lru
+        for p in get_alternative_prefixes(lru):
+            print p
+        print "\n"

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, re
-from lru import split_lru_in_stems, clean_lru
+from lru import split_lru_in_stems, get_alternative_prefixes, name_lru, clean_lru
 from read_queries import read_queries_file
 from pymongo import MongoClient
 from neo4j.v1 import GraphDatabase
@@ -98,8 +98,16 @@ def load_lrus(session, queries, pages=[]):
     print(a._summary.counters.__dict__)
 
 def run_WE_creation_rule(session, queries, lastcheck):
-    prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
-    print [p[0].properties["lru"] for p in prefixes]
+    we_prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
+    webentities=[]
+    for we_prefixe in we_prefixes:
+      lru = we_prefixe[0].properties['lru']
+      we = {}
+      we['prefixes']=get_alternative_prefixes(lru)
+      we['name']=name_lru(lru)
+      webentities.append(we)
+    result = write_query(session, queries["create_wes"], webentities=webentities)
+    print(result._summary.counters.__dict__)
 
 
 if __name__ == "__main__":
@@ -114,7 +122,7 @@ if __name__ == "__main__":
     mongoconn = MongoClient(cf.mongo_host, cf.mongo_port)[cf.mongo_base][cf.mongo_coll]
 
     # Read Neo4J Queries file
-    with open("queries/notes.cypher") as f:
+    with open("queries/core.cypher") as f:
         queries = read_queries_file(f)
 
     # Neo4J Connection
@@ -141,4 +149,3 @@ if __name__ == "__main__":
         load_lrus(session, queries)
         run_WE_creation_rule(session, queries, 0)
         print total
-
