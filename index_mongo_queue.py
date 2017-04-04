@@ -131,19 +131,20 @@ if __name__ == "__main__":
             init_neo4j(session, queries)
         print mongoconn.count()
         pages = []
-        total = 0
+        totalsize = 0
+        batchsize = 0
         for page in mongoconn.find({}):
             pages.append((
               page["lru"],
               page["lrulinks"],
               {k: v for k, v in page.items() if k in ["encoding", "error", "depth", "status", "timestamp"]}
             ))
-            if len(pages) >= cf.page_batch:
+            totalsize += len(page["lrulinks"]) + 1
+            batchsize += len(page["lrulinks"]) + 1
+            if batchsize >= cf.page_batch:
                 load_lrus(session, queries, pages)
-                total += len(pages["lrulinks"]) + 1
                 pages = []
+                batchzize = 0
         load_lrus(session, queries, pages)
-        total += len(pages["lrulinks"]) + 1
-        load_lrus(session, queries)
         run_WE_creation_rule(session, queries, 0)
-        print total
+        print totalsize
