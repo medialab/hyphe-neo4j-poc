@@ -88,7 +88,7 @@ def load_lrus(session, queries, pages=[]):
 
 def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
-    lrus = [we_prefixe[0].properties['lru'] for we_prefixe in we_prefixes]
+    lrus = next(we_prefixes.records())["lrus"]
     webentities=[]
     lrusToCreate=[]
     for lru in lrus:
@@ -98,7 +98,8 @@ def run_WE_creation_rule(session, queries, lastcheck):
       we['name']=name_lru(lru)
       webentities.append(we)
 
-    write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru) for lru in lrusToCreate])
+    result = write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru) for lru in lrusToCreate])
+    print(result._summary.counters.__dict__)
     result = write_query(session, queries["create_wes"], webentities=webentities)
     print(result._summary.counters.__dict__)
 
@@ -141,5 +142,5 @@ if __name__ == "__main__":
                 pages = []
                 batchzize = 0
         load_lrus(session, queries, pages)
-        run_WE_creation_rule(session, queries, 0)
         print totalsize
+        run_WE_creation_rule(session, queries, 0)

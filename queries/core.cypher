@@ -80,7 +80,7 @@ WHERE
       (s {type:'Path'})-[:PARENT]->(:Stem {lru:'s:http|h:com|h:twitter|'})
     )
   )
-RETURN s
+RETURN collect(s.lru) AS lrus;
 
 // name: create_wes
 UNWIND $webentities as we
