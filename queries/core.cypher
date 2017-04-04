@@ -21,22 +21,24 @@ WITH [{lru: ""}] + stems AS stems
 WITH extract(n IN range(1, size(stems) - 1) | {first: stems[n - 1], second: stems[n]}) AS tuples
 UNWIND tuples AS tuple
 
-MERGE (a:Stem {lru: tuple.first.lru})
-MERGE (b:Stem {lru: tuple.second.lru})
-FOREACH (_ IN CASE WHEN NOT tuple.second.page THEN [1] ELSE [] END |
-  MERGE (a)<-[:PARENT]-(b)
+FOREACH (_ IN CASE WHEN NOT coalesce(tuple.second.page, false) THEN [1] ELSE [] END |
+  MERGE (a:Stem {lru: tuple.first.lru})
+  MERGE (b:Stem {lru: tuple.second.lru})
     ON CREATE SET
       b.type = tuple.second.type,
       b.stem = tuple.second.stem,
       b.createdTimestamp = timestamp()
-)
-FOREACH (_ IN CASE WHEN tuple.second.page THEN [1] ELSE [] END |
   MERGE (a)<-[:PARENT]-(b)
+)
+FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END |
+  MERGE (a:Stem {lru: tuple.first.lru})
+  MERGE (b:Stem {lru: tuple.second.lru})
     ON CREATE SET
       b.type = tuple.second.type,
       b.stem = tuple.second.stem,
       b.createdTimestamp = timestamp(),
       b:Page
+  MERGE (a)<-[:PARENT]-(b)
 );
 
 // name: we_default_creation_rule
