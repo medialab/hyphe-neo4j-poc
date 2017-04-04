@@ -2,11 +2,15 @@
 // Creating a uniqueness constraint on the stems' LRUs.
 CREATE CONSTRAINT ON (s:Stem) ASSERT s.lru IS UNIQUE;
 
-// name: timestamp_index
+// name: stem_timestamp_index
 // Creating an index on the stems' creation timestamp.
 CREATE INDEX ON :Stem(createdTimestamp);
 
-// name: startup
+// name: stem_type_index
+// Creating an index on the stems' type.
+CREATE INDEX ON :Stem(type);
+
+// name: create_root
 // Startup query creating basic nodes such as the ROOT.
 MERGE (:Stem {lru: "", stem: "ROOT"});
 
@@ -76,7 +80,7 @@ WHERE
       (s {type:'Path'})-[:PARENT]->(:Stem {lru:'s:http|h:com|h:twitter|'})
     )
   )
-RETURN s
+RETURN collect(s.lru) AS lrus;
 
 // name: create_wes
 UNWIND $webentities as we
