@@ -28,6 +28,7 @@ types = {
   "q": "Query",
   "f": "Fragment"
 }
+
 def lru_to_stemnodes(lru):
     stems = []
     lru = clean_lru(lru)
@@ -37,14 +38,28 @@ def lru_to_stemnodes(lru):
         stems.append({
           "lru": sublru,
           "type": types[typ],
-          "stem": stem
+          "stem": val
         })
     stems[-1]["page"] = True
     return stems
 
-def lru_to_stemnodes_bigrams(lru):
-    stems = lru_to_stemnodes(lru)
-    return zip(stems, stems[1:])
+def prepare_lrus(lru, lruLinks, crawlMetas={}):
+    lrus = []
+
+    lrus.append(lru_to_stemnodes(lru))
+    lrus[-1][-1]["crawled"] = True
+    lrus[-1][-1]["crawlDepth"] = crawlMetas["depth"]
+    lrus[-1][-1]["crawlTimestamp"] = crawlMetas["timestamp"]
+    lrus[-1][-1]["crawlHTTPCode"] = crawlMetas["status"]
+    lrus[-1][-1]["crawlError"] = crawlMetas["error"]
+    lrus[-1][-1]["pageEncoding"] = crawlMetas["encoding"]
+
+    for link in lruLinks:
+        lrus.append(lru_to_stemnodes(link))
+        lrus[-1][-1]["linked"] = True
+        lrus[-1][-1]["crawlDepth"] = crawlMetas["depth"] + 1
+        lrus[-1][-1]["crawlTimestamp"] = crawlMetas["timestamp"]
+    return lrus
 
 def write_query(session, query, **kwargs):
     return session.write_transaction(lambda tx: tx.run(query, **kwargs))
@@ -57,16 +72,30 @@ def init_neo4j(session, queries):
     write_query(session, queries["constrain_lru"])
     write_query(session, queries["startup"])
 
-def load_lrus(session, queries, lrus=[]):
-    if not lrus:
-        lrus = ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-           "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
-           's:http|h:com|h:twitter|p:medialab_ScPo|',
-           's:http|h:com|h:twitter|p:paulanomalie|']
-    a = write_query(session, queries["index"], lrus=[lru_to_stemnodes(lru) for lru in lrus])
+def load_lrus(session, queries, pages=[]):
+    if not pages:
+        pages = [(
+          "s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+          [
+            "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
+            "s:http|h:com|h:twitter|p:medialab_ScPo|",
+            "s:http|h:com|h:twitter|p:paulanomalie|"
+          ],
+          {
+            "encoding": "utf-8",
+            "depth": 0,
+            "error": None,
+            "status": 200,
+            "timestamp": 1472238151623
+          }
+        )]
+    lrus = []
+    for lru, lrulinks, metas in pages:
+        lrus += prepare_lrus(lru, lrulinks, metas)
+    a = write_query(session, queries["index"], lrus=lrus)
     print(a._summary.counters.__dict__)
 
-def run_WE_creation_rule(session, queries, lastcheck):  
+def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
     lrus = [we_prefixe[0].properties['lru'] for we_prefixe in we_prefixes]
     webentities=[]
@@ -95,7 +124,7 @@ if __name__ == "__main__":
     mongoconn = MongoClient(cf.mongo_host, cf.mongo_port)[cf.mongo_base][cf.mongo_coll]
 
     # Read Neo4J Queries file
-    with open("queries/notes.cypher") as f:
+    with open("queries/core.cypher") as f:
         queries = read_queries_file(f)
 
     # Neo4J Connection
@@ -105,16 +134,20 @@ if __name__ == "__main__":
         if len(sys.argv) > 1:
             init_neo4j(session, queries)
         print mongoconn.count()
-        lrus = []
+        pages = []
         total = 0
         for page in mongoconn.find({}):
-            lrus += [page["lru"]] + page["lrulinks"]
-            if len(lrus) >= cf.page_batch:
-                load_lrus(session, queries, lrus)
-                total += len(lrus)
-                lrus = []
-        load_lrus(session, queries, lrus)
-        total += len(lrus)
+            pages.append((
+              page["lru"],
+              page["lrulinks"],
+              {k: v for k, v in page.items() if k in ["encoding", "error", "depth", "status", "timestamp"]}
+            ))
+            if len(pages) >= cf.page_batch:
+                load_lrus(session, queries, pages)
+                total += len(pages["lrulinks"]) + 1
+                pages = []
+        load_lrus(session, queries, pages)
+        total += len(pages["lrulinks"]) + 1
+        load_lrus(session, queries)
         run_WE_creation_rule(session, queries, 0)
         print total
-
