@@ -41,11 +41,11 @@ RETURN s
 
 // name: create_wes
 // [[lru1,lru2,lru3,lru4],...]
-UNWIND $webentities as we
-WITH we.name as weName, we.prefixes as prefixes
+UNWIND $webentities AS we
+WITH we.name AS weName, we.prefixes AS prefixes
 MERGE (we:WebEntity {name:weName})
 WITH we, prefixes
-UNWIND prefixes as prefixe
+UNWIND prefixes AS prefixe
 MERGE (s:Stem {lru:prefixe})
 WITH we,s
 MATCH (s)
