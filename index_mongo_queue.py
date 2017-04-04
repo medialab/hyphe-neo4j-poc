@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, re
-from lru import split_lru_in_stems, clean_lru
+from lru import split_lru_in_stems, get_alternative_prefixes, name_lru, clean_lru
 from read_queries import read_queries_file
 from neo4j.v1 import GraphDatabase
 from warnings import filterwarnings
@@ -65,9 +65,17 @@ def run_load(session, queries):
     print(a._summary.counters.__dict__)
 
 def run_WE_creation_rule(session, queries, lastcheck):
-    prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
-    print prefixes
-
+    
+    we_prefixes = read_query(session, queries["we_default_creation_rule"], lastcheck=lastcheck)
+    webentities=[]
+    for we_prefixe in we_prefixes:
+      lru = we_prefixe[0].properties['lru']
+      we = {}
+      we['prefixes']=get_alternative_prefixes(lru)
+      we['name']=name_lru(lru)
+      webentities.append(we)
+    result = write_query(session, queries["create_wes"], webentities=webentities)
+    print(result._summary.counters.__dict__)
 
 if __name__ == "__main__":
     try:
@@ -81,7 +89,7 @@ if __name__ == "__main__":
 
     neo4jdriver = GraphDatabase.driver("bolt://%s:%s" % (neo4j_host, neo4j_port), auth=(neo4j_user, neo4j_pass))
     with neo4jdriver.session() as session:
+        init_neo4j(session, queries)
+        run_load(session, queries)
         run_WE_creation_rule(session, queries, 0)
-        #init_neo4j(session, queries)
-        #run_load(session, queries)
 
