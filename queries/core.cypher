@@ -44,10 +44,10 @@ RETURN s
 UNWIND $webentities as we
 WITH we.name as weName, we.prefixes as prefixes
 MERGE (we:WebEntity {name:weName})
-with we, prefixes
+WITH we, prefixes
 UNWIND prefixes as prefixe
 MERGE (s:Stem {lru:prefixe})
-with we,s
+WITH we,s
 MATCH (s)
 WHERE NOT (s)-[:PREFIX]->()
 CREATE (we)<-[:PREFIX]-(s)
