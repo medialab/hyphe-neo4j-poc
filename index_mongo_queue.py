@@ -96,7 +96,6 @@ def load_pages_batch(session, queries, pages=[], links=[]):
     for lru, lrulinks, metas in pages:
         lrus += prepare_lrus(lru, lrulinks, metas)
 
-    print len(lrus), len(links)
     a = write_query(session, queries["index_lrus"], lrus=lrus)
     print(a._summary.counters.__dict__)
     a = write_query(session, queries["index_links"], links=links)
@@ -123,7 +122,7 @@ def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size):
             load_pages_batch(session, queries, pages, links)
             pages = []
             links = []
-            batchzize = 0
+            batchsize = 0
     load_pages_batch(session, queries, pages, links)
     print totalsize
 
