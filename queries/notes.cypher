@@ -11,7 +11,7 @@ CREATE CONSTRAINT ON (s:Stem) ASSERT s.lru IS UNIQUE;
 
 // name: startup
 // Startup query creating basic nodes & defining indices
-MERGE (:Stem {lru: ""});
+MERGE (:Stem {lru: "", stem:"ROOT"});
 
 // name: drop_db
 MATCH (n) DETACH DELETE n;
@@ -52,3 +52,4 @@ with we,s
 MATCH (s)
 WHERE NOT (s)-[:PREFIX]->()
 CREATE (we)<-[:PREFIX]-(s)
+
