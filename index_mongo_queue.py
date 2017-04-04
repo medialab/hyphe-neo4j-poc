@@ -59,8 +59,6 @@ def prepare_lrus(lru, lruLinks, crawlMetas={}):
         lrus[-1][-1]["linked"] = True
         lrus[-1][-1]["crawlDepth"] = crawlMetas["depth"] + 1
         lrus[-1][-1]["crawlTimestamp"] = crawlMetas["timestamp"]
-    from pprint import pprint
-    pprint(lrus)
     return lrus
 
 def write_query(session, query, **kwargs):
@@ -134,18 +132,18 @@ if __name__ == "__main__":
         print mongoconn.count()
         pages = []
         total = 0
-#        for page in mongoconn.find({}):
-#            pages.append((
-#              page["lru"],
-#              page["lrulinks"],
-#              {k: v for k, v in page.items() if k in ["encoding", "error", "depth", "status", "timestamp"]}
-#            ))
-#            if len(pages) >= cf.page_batch:
-#                load_lrus(session, queries, pages)
-#                total += len(pages["lrulinks"]) + 1
-#                pages = []
-#        load_lrus(session, queries, pages)
-#        total += len(pages["lrulinks"]) + 1
+        for page in mongoconn.find({}):
+            pages.append((
+              page["lru"],
+              page["lrulinks"],
+              {k: v for k, v in page.items() if k in ["encoding", "error", "depth", "status", "timestamp"]}
+            ))
+            if len(pages) >= cf.page_batch:
+                load_lrus(session, queries, pages)
+                total += len(pages["lrulinks"]) + 1
+                pages = []
+        load_lrus(session, queries, pages)
+        total += len(pages["lrulinks"]) + 1
         load_lrus(session, queries)
         run_WE_creation_rule(session, queries, 0)
         print total
