@@ -21,8 +21,8 @@ def read_query(session, query, **kwargs):
 def init_neo4j(session, queries):
     write_query(session, queries["drop_db"])
     write_query(session, queries["constrain_lru"])
-    write_query(session, queries["stem_timestamp_index"])
-    write_query(session, queries["stem_type_index"])
+    #write_query(session, queries["stem_timestamp_index"])
+    #write_query(session, queries["stem_type_index"])
     write_query(session, queries["create_root"])
 
 stemTypes = {
@@ -236,13 +236,13 @@ def load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_
         batchsize += len(page["lrulinks"]) + 1
         totalsize += len(page["lrulinks"]) + 1
         if batchsize >= lrus_batch_size:
-            load_pages_batch(session, queries, pages, links)
+            load_pages_batch_refactoWECR(session, queries, pages, links)
             print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
             pages = []
             links = []
             batchsize = 0
             t = time()
-    load_pages_batch(session, queries, pages, links)
+    load_pages_batch_refactoWECR(session, queries, pages, links)
     print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
 
 
@@ -292,8 +292,9 @@ if __name__ == "__main__":
     # MongoDB Connection
     mongodb = MongoClient(mongo_conf["host"], mongo_conf["port"])
     mongoconn = mongodb[mongo_conf["base"]][mongo_conf["coll"]]
-    print "Creating index"
-    mongoconn.ensure_index("_job")
+    if "_job" not in [v["key"][0][0] for v in mongoconn.index_information().values()]:
+        print "Creating index"
+        mongoconn.ensure_index("_job")
 
     # Read Neo4J Queries file
     with open("queries/core.cypher") as f:
@@ -309,6 +310,7 @@ if __name__ == "__main__":
         if len(sys.argv) > 1:
             init_neo4j(session, queries)
         init_WE_creation_rule(session, queries)
-        #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
-        load_pages_batch_refactoWECR(session, queries)
+        #load_pages_batch_refactoWECR(session, queries)
+        load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_size)
+        
         #run_WE_creation_rule(session, queries, 0)

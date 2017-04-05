@@ -75,8 +75,7 @@ FOREACH (_ IN CASE WHEN NOT coalesce(tuple.second.page, false) THEN [1] ELSE [] 
   MERGE (b:Stem {lru: tuple.second.lru})
     ON CREATE SET
       b.type = tuple.second.type,
-      b.stem = tuple.second.stem,
-      b.createdTimestamp = timestamp()
+      b.stem = tuple.second.stem
   MERGE (a)<-[:PARENT]-(b)
 )
 
