@@ -111,7 +111,7 @@ MATCH (s:Stem {lru:prefixe})
 WHERE NOT (s)-[:PREFIX]->()
 CREATE (we)<-[:PREFIX]-(s);
 
-//dump
+// name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
 WITH stems, reduce( maxStem = {lru:'', depth:0}, stem IN extract(stem in stems | {depth:size(stem.lru),lru:stem.lru}) | CASE WHEN stem.depth >= maxStem.depth THEN stem ELSE maxStem END) AS pointer, lru
