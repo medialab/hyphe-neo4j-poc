@@ -187,8 +187,9 @@ if __name__ == "__main__":
     # MongoDB Connection
     mongodb = MongoClient(mongo_conf["host"], mongo_conf["port"])
     mongoconn = mongodb[mongo_conf["base"]][mongo_conf["coll"]]
-    print "Creating index"
-    mongoconn.ensure_index("_job")
+    if "_job" not in [v["key"][0][0] for v in mongoconn.index_information().values()]:
+        print "Creating index"
+        mongoconn.ensure_index("_job")
 
     # Read Neo4J Queries file
     with open("queries/core.cypher") as f:
