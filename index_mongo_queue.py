@@ -80,7 +80,7 @@ def load_pages_batch(session, queries, pages=[], links=[]):
             "depth": 0,
             "error": None,
             "status": 200,
-            "timestamp": int(time.time())
+            "timestamp": int(time())
           }
         )]
 
@@ -103,30 +103,47 @@ def load_pages_batch(session, queries, pages=[], links=[]):
     a = write_query(session, queries["index_links"], links=links)
     print(a._summary.counters.__dict__)
 
+def duration(t, minutes=False):
+    t1 = time() - t
+    if minutes:
+        t1 /= 60.
+    return int(round(t1))
+
+
 def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size):
     print mongoconn.count()
     pages = []
     links = []
     batchsize = 0
     totalsize = 0
-    for page in mongoconn.find({}):
+    donepages = 0
+    t0 = time()
+    t = time()
+    last_WEs_creation_time = 0
+    for page in mongoconn.find({}, sort=[("_job", 1)]):
         pages.append((
           page["lru"],
           page["lrulinks"],
           {k: v for k, v in page.items()
             if k in ["encoding", "error", "depth", "status", "timestamp"]}
         ))
+        donepages += 1
         for link in page["lrulinks"]:
             links.append([page["lru"], link])
         batchsize += len(page["lrulinks"]) + 1
         totalsize += len(page["lrulinks"]) + 1
         if batchsize >= lrus_batch_size:
             load_pages_batch(session, queries, pages, links)
+            new_WEs_creation_time = 0
+            run_WE_creation_rule(session, queries, last_WEs_creation_time)
+            last_WEs_creation_time = new_WEs_creation_time
+            print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
             pages = []
             links = []
             batchsize = 0
+            t = time()
     load_pages_batch(session, queries, pages, links)
-    print totalsize
+    print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
 
 def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_default_creation_rule"],
@@ -175,6 +192,6 @@ if __name__ == "__main__":
         # ResetDB
         if len(sys.argv) > 1:
             init_neo4j(session, queries)
-        #load_pages_batch(session, queries)
         load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
-        run_WE_creation_rule(session, queries, 0)
+        #load_pages_batch(session, queries)
+        #run_WE_creation_rule(session, queries, 0)
