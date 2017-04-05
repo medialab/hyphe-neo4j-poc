@@ -134,7 +134,7 @@ def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size):
         totalsize += len(page["lrulinks"]) + 1
         if batchsize >= lrus_batch_size:
             load_pages_batch(session, queries, pages, links)
-            new_WEs_creation_time = 0
+            new_WEs_creation_time = time()
             run_WE_creation_rule(session, queries, last_WEs_creation_time)
             last_WEs_creation_time = new_WEs_creation_time
             print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
@@ -165,6 +165,15 @@ def run_WE_creation_rule(session, queries, lastcheck):
                          webentities=webentities)
     print(result._summary.counters.__dict__)
 
+def init_WE_creation_rule(session, queries):
+  # default rule
+  rules =[
+    {'lru':'','regexp':'s:[a-zA-Z]+\\|(t:[0-9]+\\|)?(h:[^\\|]+\\|(h:[^\\|]+\\|)+|h:(localhost|(\\d{1,3}\\.){3}\\d{1,3}|\\[[\\da-f]*:[\\da-f:]*\\])\\|)'},
+    {'lru':'s:http|h:com|h:twitter|','regexp':'(.*?|h:twitter|p:.*?)|.*'} 
+  ]
+  write_query(session,queries["index_lrus"],lrus = [lru_to_stemnodes(r["lru"]) for r in rules if r["lru"]!=""])
+  write_query(session, queries["create_wecreationrules"], rules=rules)
+
 
 if __name__ == "__main__":
     # Load config
@@ -194,6 +203,7 @@ if __name__ == "__main__":
         # ResetDB
         if len(sys.argv) > 1:
             init_neo4j(session, queries)
-        load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
-        #load_pages_batch(session, queries)
+        init_WE_creation_rule(session, queries)
+        #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
+        load_pages_batch(session, queries)
         #run_WE_creation_rule(session, queries, 0)

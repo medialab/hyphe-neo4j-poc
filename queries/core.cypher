@@ -22,7 +22,7 @@ MERGE (:Stem {lru: "", stem: "ROOT"});
 // Indexing a batch of LRUs represented as lists of stems.
 UNWIND $lrus AS stems
 WITH [{lru: ""}] + stems AS stems
-WITH extract(n IN range(1, size(stems) - 1) | {first: stems[n - 1], second: stems[n]}) AS tuples
+WITH stems[size(stems)-1].lru as lru, extract(n IN range(1, size(stems) - 1) | {first: stems[n - 1], second: stems[n]}) AS tuples
 UNWIND tuples AS tuple
 
 FOREACH (_ IN CASE WHEN NOT coalesce(tuple.second.page, false) THEN [1] ELSE [] END |
@@ -61,7 +61,13 @@ FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END 
       b.linked = coalesce(tuple.second.linked, b.linked),
       b:Page
   MERGE (a)<-[:PARENT]-(b)
-);
+)
+with lru,tuple
+MATCH (a:Stem {lru: tuple.second.lru})-[:PREFIX]->(wecr:WebEntityCreationRule)
+WITH lru, reduce( maxStem = {lru:'', depth:0}, stem IN COLLECT({depth:size(tuple.second.lru),lru:tuple.second.lru}) | CASE WHEN stem.depth >= maxStem.depth THEN stem ELSE maxStem END) AS pointer
+RETURN lru, pointer
+
+;
 
 // name: index_links
 UNWIND $links as link
@@ -88,6 +94,12 @@ WHERE
   )
 RETURN collect(s.lru) AS lrus;
 
+// name: create_wecreationrules
+UNWIND $rules as rule
+MATCH (prefix:Stem {lru:rule.lru})
+CREATE (prefix)<-[:PREFIX]-(:WebEntityCreationRule {regexp:rule.regexp})
+
+
 // name: create_wes
 UNWIND $webentities as we
 WITH we.name as weName, we.prefixes as prefixes
@@ -99,3 +111,11 @@ MATCH (s:Stem {lru:prefixe})
 WHERE NOT (s)-[:PREFIX]->()
 CREATE (we)<-[:PREFIX]-(s);
 
+//dump
+UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
+WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
+WITH stems, reduce( maxStem = {lru:'', depth:0}, stem IN extract(stem in stems | {depth:size(stem.lru),lru:stem.lru}) | CASE WHEN stem.depth >= maxStem.depth THEN stem ELSE maxStem END) AS pointer, lru
+WITH extract(n IN range(1, size(stems) - 1) | {first: stems[n - 1], second: stems[n]}) AS tuples, pointer, lru
+UNWIND tuples AS tuple
+with lru, pointer, collect(tuple) as _ 
+RETURN lru, pointer
