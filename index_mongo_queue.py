@@ -212,6 +212,7 @@ def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size):
             batchsize = 0
             t = time()
     load_pages_batch(session, queries, pages, links)
+    run_WE_creation_rule(session, queries, last_WEs_creation_time)
     print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
 
 def load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_size):
@@ -312,5 +313,5 @@ if __name__ == "__main__":
         init_WE_creation_rule(session, queries)
         #load_pages_batch_refactoWECR(session, queries)
         load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_size)
+        #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
         
-        #run_WE_creation_rule(session, queries, 0)
