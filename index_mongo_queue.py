@@ -4,6 +4,7 @@
 import sys, re
 from time import time
 from lru import split_lru_in_stems, get_alt_prefixes, name_lru, clean_lru
+from creationRules import getPreset
 from read_queries import read_queries_file
 from pymongo import MongoClient
 from neo4j.v1 import GraphDatabase
@@ -32,6 +33,9 @@ stemTypes = {
   "q": "Query",
   "f": "Fragment"
 }
+
+CREATION_RULES_REGEXP = {}
+
 def lru_to_stemnodes(lru):
     stems = []
     lru = clean_lru(lru)
@@ -66,6 +70,68 @@ def prepare_lrus(lru, lruLinks, crawlMetas={}):
 
     return lrus
 
+def load_pages_batch_refactoWECR(session, queries, pages=[], links=[]):
+    if not pages:
+        pages = [(
+          "s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+          [
+            "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
+            "s:http|h:com|h:twitter|p:medialab_ScPo|",
+            "s:http|h:com|h:twitter|p:paulanomalie|"
+          ],
+          {
+            "encoding": "utf-8",
+            "depth": 0,
+            "error": None,
+            "status": 200,
+            "timestamp": int(time())
+          }
+        )]
+
+    if not links:
+        links = [
+          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+           "s:http|h:fr|h:sciences-po|h:medialab|p:projets|"],
+          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+           "s:http|h:com|h:twitter|p:medialab_ScPo|"],
+          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+           "s:http|h:com|h:twitter|p:paulanomalie|"]
+        ]
+
+    lrus = []
+    for lru, lrulinks, metas in pages:
+        lrus += prepare_lrus(lru, lrulinks, metas)
+
+    # pages
+    results = write_query(session, queries["index_lrus_return_wecr"], lrus=lrus)
+    print(results._summary.counters.__dict__)
+    wetocreate = []
+    for r in results.records():
+      wetocreate.append(CREATION_RULES_REGEXP[r['prefix']+r['pattern']].match(r['lru']).group(1))
+    # links
+    a = write_query(session, queries["index_links"], links=links)
+    print(a._summary.counters.__dict__)
+    # web entities
+    createWebEntities(wetocreate)
+
+def createWebEntities(lrus):
+  webentities = []
+  lrusToCreate = []
+  for lru in lrus:
+      we = {}
+      we['prefixes'] = get_alt_prefixes(lru)
+      lrusToCreate += we['prefixes']
+      we['name'] = name_lru(lru)
+      webentities.append(we)
+
+  result = write_query(session, queries["index_lrus"],
+                       lrus=[lru_to_stemnodes(lru) for lru in lrusToCreate])
+  print(result._summary.counters.__dict__)
+  result = write_query(session, queries["create_wes"],
+                       webentities=webentities)
+  print(result._summary.counters.__dict__)
+
+
 def load_pages_batch(session, queries, pages=[], links=[]):
     if not pages:
         pages = [(
@@ -98,10 +164,13 @@ def load_pages_batch(session, queries, pages=[], links=[]):
     for lru, lrulinks, metas in pages:
         lrus += prepare_lrus(lru, lrulinks, metas)
 
+    # pages
     a = write_query(session, queries["index_lrus"], lrus=lrus)
     print(a._summary.counters.__dict__)
+    # links
     a = write_query(session, queries["index_links"], links=links)
     print(a._summary.counters.__dict__)
+    # web entities
 
 def duration(t, minutes=False):
     t1 = time() - t
@@ -145,6 +214,39 @@ def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size):
     load_pages_batch(session, queries, pages, links)
     print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
 
+def load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_size):
+    print mongoconn.count()
+    pages = []
+    links = []
+    batchsize = 0
+    totalsize = 0
+    donepages = 0
+    t0 = time()
+    t = time()
+    for page in mongoconn.find({}, sort=[("_job", 1)]):
+        pages.append((
+          page["lru"],
+          page["lrulinks"],
+          {k: v for k, v in page.items()
+            if k in ["encoding", "error", "depth", "status", "timestamp"]}
+        ))
+        donepages += 1
+        for link in page["lrulinks"]:
+            links.append([page["lru"], link])
+        batchsize += len(page["lrulinks"]) + 1
+        totalsize += len(page["lrulinks"]) + 1
+        if batchsize >= lrus_batch_size:
+            load_pages_batch(session, queries, pages, links)
+            print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
+            pages = []
+            links = []
+            batchsize = 0
+            t = time()
+    load_pages_batch(session, queries, pages, links)
+    print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
+
+
+
 def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_default_creation_rule"],
                              lastcheck=lastcheck)
@@ -168,10 +270,13 @@ def run_WE_creation_rule(session, queries, lastcheck):
 def init_WE_creation_rule(session, queries):
   # default rule
   rules =[
-    {'lru':'','regexp':'s:[a-zA-Z]+\\|(t:[0-9]+\\|)?(h:[^\\|]+\\|(h:[^\\|]+\\|)+|h:(localhost|(\\d{1,3}\\.){3}\\d{1,3}|\\[[\\da-f]*:[\\da-f:]*\\])\\|)'},
-    {'lru':'s:http|h:com|h:twitter|','regexp':'(.*?|h:twitter|p:.*?)|.*'} 
+    {'prefix':'','pattern':'domain'},
+    {'prefix':'s:http|h:com|h:twitter|','pattern':'path-1'} 
   ]
-  write_query(session,queries["index_lrus"],lrus = [lru_to_stemnodes(r["lru"]) for r in rules if r["lru"]!=""])
+  # prepare regexp for creation rules in runtime
+  for r in rules:
+    CREATION_RULES_REGEXP[r['prefix']+r['pattern']] = re.compile(getPreset(r['pattern'], r['prefix']))
+  write_query(session,queries["index_lrus"],lrus = [lru_to_stemnodes(r["prefix"]) for r in rules if r["prefix"]!=""])
   write_query(session, queries["create_wecreationrules"], rules=rules)
 
 
@@ -205,5 +310,5 @@ if __name__ == "__main__":
             init_neo4j(session, queries)
         init_WE_creation_rule(session, queries)
         #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
-        load_pages_batch(session, queries)
+        load_pages_batch_refactoWECR(session, queries)
         #run_WE_creation_rule(session, queries, 0)
