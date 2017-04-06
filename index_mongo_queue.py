@@ -260,6 +260,7 @@ if __name__ == "__main__":
             init_neo4j(session, queries, WECR_method)
         # Build WECRs
         WECR_regexps = init_WE_creation_rules(session, queries)
+        WECR_regexps = WECR_regexps if WECR_method == "onindex" else {}
         if load_type == "dummy":
         # Load dummy test data
             load_pages_batch(
@@ -275,7 +276,7 @@ if __name__ == "__main__":
               session,
               queries,
               lrus_batch_size,
-              WECR_regexps
+              WECR_regexps=WECR_regexps
             )
         else:
             sys.stderr.write('ERROR: load_type in config.py should be "dummy" '
