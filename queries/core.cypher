@@ -201,6 +201,19 @@ MATCH (targetStem)-[:PREFIX]->(target:WebEntity)
 WHERE source <> target
 RETURN source, target, count(path) AS weight;
 
+// name: get_webentity_links_v2bis
+MATCH (source:WebEntity)<-[:PREFIX]-(:Stem)<-[:PARENT*0..]-(stem:Stem)
+WHERE (stem)-[:PREFIX]->(source) OR NOT (stem)-[:PREFIX]->(:WebEntity)
+WITH source, stem AS sourcePage
+WHERE stem:Page
+MATCH (sourcePage)-[:LINK]->(targetPage:Page)
+WITH source, targetPage
+
+MATCH (targetPage)<-[:PARENT*0..]-(inner:Stem)-[:PREFIX]->(target:WebEntity )
+WHERE inner = targetPage OR NOT (inner)-[:PREFIX]->(:WebEntity)
+RETURN source.name, target.name, count(*) AS weight
+ORDER BY source.name;
+
 // name: get_webentity_links_v3
 MATCH (source:WebEntity), (target:WebEntity)
 WHERE
