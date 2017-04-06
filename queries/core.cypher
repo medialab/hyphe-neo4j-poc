@@ -160,6 +160,13 @@ MATCH (s:Stem {lru:prefixe})
 WHERE NOT (s)-[:PREFIX]->()
 CREATE (we)<-[:PREFIX]-(s);
 
+// name: get_webentity_links
+MATCH (we:WebEntity)<-[:PREFIX]-(:Stem)<-[rels:PARENT*0..]-(s:Stem)
+WHERE ALL(s IN extract(rel in rels | endNode(rel)) WHERE NOT (s)-[:PREFIX]->(:WebEntity))
+MATCH (s)-[l:LINK]->(:Stem)-[:PARENT*0..]->(:Stem)-[:PREFIX]->(twe:WebEntity)
+WHERE twe <> we
+RETURN DISTINCT id(we) as Source, we.name as Source_label, id(twe) as Target, twe.name as Target_label, count(l) as weight;
+
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru

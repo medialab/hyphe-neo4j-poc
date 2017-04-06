@@ -11,3 +11,5 @@ mongo_conf = {
   "coll": "corpus.pages"
 }
 lrus_batch_size = 50000
+#WECR_method = "afterindex"
+WECR_method = "onindex"

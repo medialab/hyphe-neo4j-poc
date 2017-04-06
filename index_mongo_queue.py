@@ -12,6 +12,41 @@ from warnings import filterwarnings
 filterwarnings(action='ignore', category=UserWarning,
                message="Bolt over TLS is only available")
 
+TEST_DATA = {
+  "pages": [(
+    "s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+    [
+      "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
+      "s:http|h:com|h:twitter|p:medialab_ScPo|",
+      "s:http|h:com|h:twitter|p:paulanomalie|"
+    ],
+    {
+      "encoding": "utf-8",
+      "depth": 0,
+      "error": None,
+      "status": 200,
+      "timestamp": int(time())
+    }
+  )],
+  "links": [
+    ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+     "s:http|h:fr|h:sciences-po|h:medialab|p:projets|"],
+    ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+     "s:http|h:com|h:twitter|p:medialab_ScPo|"],
+    ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
+     "s:http|h:com|h:twitter|p:paulanomalie|"]
+  ],
+  "WECRs": [
+    {'prefix': '', 'pattern': 'domain'},
+    {'prefix': 's:http|h:com|h:twitter|', 'pattern': 'path-1'},
+    {'prefix': 's:https|h:com|h:twitter|', 'pattern': 'path-1'},
+    {'prefix': 's:https|h:com|h:facebook|', 'pattern': 'path-1'},
+    {'prefix': 's:https|h:com|h:facebook|', 'pattern': 'path-1'},
+    {'prefix': 's:https|h:com|h:linkedin|', 'pattern': 'path-2'},
+    {'prefix': 's:https|h:com|h:linkedin|', 'pattern': 'path-2'}
+  ]
+}
+
 def write_query(session, query, **kwargs):
     return session.write_transaction(lambda tx: tx.run(query, **kwargs))
 
@@ -33,8 +68,6 @@ stemTypes = {
   "q": "Query",
   "f": "Fragment"
 }
-
-CREATION_RULES_REGEXP = {}
 
 def lru_to_stemnodes(lru):
     stems = []
@@ -70,188 +103,15 @@ def prepare_lrus(lru, lruLinks, crawlMetas={}):
 
     return lrus
 
-def load_pages_batch_refactoWECR(session, queries, pages=[], links=[]):
-    if not pages:
-        pages = [(
-          "s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-          [
-            "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
-            "s:http|h:com|h:twitter|p:medialab_ScPo|",
-            "s:http|h:com|h:twitter|p:paulanomalie|"
-          ],
-          {
-            "encoding": "utf-8",
-            "depth": 0,
-            "error": None,
-            "status": 200,
-            "timestamp": int(time())
-          }
-        )]
-
-    if not links:
-        links = [
-          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-           "s:http|h:fr|h:sciences-po|h:medialab|p:projets|"],
-          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-           "s:http|h:com|h:twitter|p:medialab_ScPo|"],
-          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-           "s:http|h:com|h:twitter|p:paulanomalie|"]
-        ]
-
-    lrus = []
-    for lru, lrulinks, metas in pages:
-        lrus += prepare_lrus(lru, lrulinks, metas)
-
-    # pages
-    results = write_query(session, queries["index_lrus_return_wecr"], lrus=lrus)
-    print(results._summary.counters.__dict__)
-    wetocreate = []
-    for r in results.records():
-        try:
-            we = CREATION_RULES_REGEXP[r['prefix']+r['pattern']].match(r['lru']).group(1)
-            wetocreate.append(we)
-        except Exception as e:
-            print type(e), e
-            print "WARNING: error on applying WECR ", CREATION_RULES_REGEXP[r['prefix']+r['pattern']], "on", r['lru']
-    # links
-    a = write_query(session, queries["index_links"], links=links)
-    print(a._summary.counters.__dict__)
-    # web entities
-    createWebEntities(wetocreate)
-
-def createWebEntities(lrus):
-  webentities = []
-  lrusToCreate = []
-  for lru in lrus:
-      we = {}
-      we['prefixes'] = get_alt_prefixes(lru)
-      lrusToCreate += we['prefixes']
-      we['name'] = name_lru(lru)
-      webentities.append(we)
-
-  result = write_query(session, queries["index_lrus"],
-                       lrus=[lru_to_stemnodes(lru) for lru in lrusToCreate])
-  print(result._summary.counters.__dict__)
-  result = write_query(session, queries["create_wes"],
-                       webentities=webentities)
-  print(result._summary.counters.__dict__)
-
-
-def load_pages_batch(session, queries, pages=[], links=[]):
-    if not pages:
-        pages = [(
-          "s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-          [
-            "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
-            "s:http|h:com|h:twitter|p:medialab_ScPo|",
-            "s:http|h:com|h:twitter|p:paulanomalie|"
-          ],
-          {
-            "encoding": "utf-8",
-            "depth": 0,
-            "error": None,
-            "status": 200,
-            "timestamp": int(time())
-          }
-        )]
-
-    if not links:
-        links = [
-          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-           "s:http|h:fr|h:sciences-po|h:medialab|p:projets|"],
-          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-           "s:http|h:com|h:twitter|p:medialab_ScPo|"],
-          ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-           "s:http|h:com|h:twitter|p:paulanomalie|"]
-        ]
-
-    lrus = []
-    for lru, lrulinks, metas in pages:
-        lrus += prepare_lrus(lru, lrulinks, metas)
-
-    # pages
-    a = write_query(session, queries["index_lrus"], lrus=lrus)
-    print(a._summary.counters.__dict__)
-    # links
-    a = write_query(session, queries["index_links"], links=links)
-    print(a._summary.counters.__dict__)
-    # web entities
-
-def duration(t, minutes=False):
-    t1 = time() - t
-    if minutes:
-        t1 /= 60.
-    return int(round(t1))
-
-
-def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size):
-    print mongoconn.count()
-    pages = []
-    links = []
-    batchsize = 0
-    totalsize = 0
-    donepages = 0
-    t0 = time()
-    t = time()
-    last_WEs_creation_time = 0
-    for page in mongoconn.find({}, sort=[("_job", 1)]):
-        pages.append((
-          page["lru"],
-          page["lrulinks"],
-          {k: v for k, v in page.items()
-            if k in ["encoding", "error", "depth", "status", "timestamp"]}
-        ))
-        donepages += 1
-        for link in page["lrulinks"]:
-            links.append([page["lru"], link])
-        batchsize += len(page["lrulinks"]) + 1
-        totalsize += len(page["lrulinks"]) + 1
-        if batchsize >= lrus_batch_size:
-            load_pages_batch(session, queries, pages, links)
-            new_WEs_creation_time = time()
-            run_WE_creation_rule(session, queries, last_WEs_creation_time)
-            last_WEs_creation_time = new_WEs_creation_time
-            print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
-            pages = []
-            links = []
-            batchsize = 0
-            t = time()
-    load_pages_batch(session, queries, pages, links)
-    run_WE_creation_rule(session, queries, last_WEs_creation_time)
-    print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
-
-def load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_size):
-    print mongoconn.count()
-    pages = []
-    links = []
-    batchsize = 0
-    totalsize = 0
-    donepages = 0
-    t0 = time()
-    t = time()
-    for page in mongoconn.find({}, sort=[("_job", 1)]):
-        pages.append((
-          page["lru"],
-          page["lrulinks"],
-          {k: v for k, v in page.items()
-            if k in ["encoding", "error", "depth", "status", "timestamp"]}
-        ))
-        donepages += 1
-        for link in page["lrulinks"]:
-            links.append([page["lru"], link])
-        batchsize += len(page["lrulinks"]) + 1
-        totalsize += len(page["lrulinks"]) + 1
-        if batchsize >= lrus_batch_size:
-            load_pages_batch_refactoWECR(session, queries, pages, links)
-            print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
-            pages = []
-            links = []
-            batchsize = 0
-            t = time()
-    load_pages_batch_refactoWECR(session, queries, pages, links)
-    print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
-
-
+def init_WE_creation_rules(session, queries, rules=[]):
+    # default rule
+    if not rules:
+        rules = TEST_DATA["WECRs"]
+   # prepare regexp for creation rules in runtime
+    WECR_regexps = {r['prefix'] + r['pattern']: re.compile(getPreset(r['pattern'], r['prefix'])) for r in rules}
+    write_query(session, queries["index_lrus"],lrus = [lru_to_stemnodes(r["prefix"]) for r in rules if r["prefix"]!=""])
+    write_query(session, queries["create_wecreationrules"], rules=rules)
+    return WECR_regexps
 
 def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_default_creation_rule"],
@@ -273,23 +133,106 @@ def run_WE_creation_rule(session, queries, lastcheck):
                          webentities=webentities)
     print(result._summary.counters.__dict__)
 
-def init_WE_creation_rule(session, queries):
-  # default rule
-  rules =[
-    {'prefix':'','pattern':'domain'},
-    {'prefix':'s:http|h:com|h:twitter|','pattern':'path-1'}
-  ]
-  # prepare regexp for creation rules in runtime
-  for r in rules:
-    CREATION_RULES_REGEXP[r['prefix']+r['pattern']] = re.compile(getPreset(r['pattern'], r['prefix']))
-  write_query(session,queries["index_lrus"],lrus = [lru_to_stemnodes(r["prefix"]) for r in rules if r["prefix"]!=""])
-  write_query(session, queries["create_wecreationrules"], rules=rules)
+def create_webentities(lrus):
+    webentities = []
+    lrusToCreate = []
+    for lru in lrus:
+        we = {}
+        we['prefixes'] = get_alt_prefixes(lru)
+        lrusToCreate += we['prefixes']
+        we['name'] = name_lru(lru)
+        webentities.append(we)
+
+    result = write_query(session, queries["index_lrus"],
+                         lrus=[lru_to_stemnodes(lru) for lru in lrusToCreate])
+    print(result._summary.counters.__dict__)
+    result = write_query(session, queries["create_wes"],
+                         webentities=webentities)
+    print(result._summary.counters.__dict__)
+
+def load_pages_batch(session, queries, pages=[], links=[], WECR_regexps={}):
+    if not pages:
+        pages = TEST_DATA["pages"]
+    if not links:
+        links = TEST_DATA["links"]
+
+    lrus = []
+    for lru, lrulinks, metas in pages:
+        lrus += prepare_lrus(lru, lrulinks, metas)
+
+    # pages
+    results = write_query(
+        session,
+        queries["index_lrus" + ("_return_wecr" if WECR_regexps else "")],
+        lrus=lrus
+    )
+    print(results._summary.counters.__dict__)
+
+    # web entities
+    if WECR_regexps:
+        wetocreate = []
+        for r in results.records():
+            try:
+                we = WECR_regexps[r['prefix']+r['pattern']].match(r['lru']).group(1)
+                wetocreate.append(we)
+            except AttributeError:
+                print "WARNING: error on applying WECR ", WECR_regexps[r['prefix']+r['pattern']], "on", r['lru']
+        create_webentities(wetocreate)
+
+    # links
+    linkscreation = write_query(session, queries["index_links"], links=links)
+    print(linkscreation._summary.counters.__dict__)
+
+def duration(t, minutes=False):
+    t1 = time() - t
+    if minutes:
+        t1 /= 60.
+    return int(round(t1))
+
+def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_regexps={}):
+    print mongoconn.count()
+    pages = []
+    links = []
+    batchsize = 0
+    totalsize = 0
+    donepages = 0
+    t0 = time()
+    t = time()
+    if not WECR_regexps:
+        last_WEs_creation_time = 0
+    for page in mongoconn.find({}, sort=[("_job", 1)]):
+        pages.append((
+          page["lru"],
+          page["lrulinks"],
+          {k: v for k, v in page.items()
+            if k in ["encoding", "error", "depth", "status", "timestamp"]}
+        ))
+        donepages += 1
+        for link in page["lrulinks"]:
+            links.append([page["lru"], link])
+        batchsize += len(page["lrulinks"]) + 1
+        totalsize += len(page["lrulinks"]) + 1
+        if batchsize >= lrus_batch_size:
+            load_pages_batch(session, queries, pages, links, WECR_regexps=WECR_regexps)
+            if not WECR_regexps:
+                new_WEs_creation_time = time()
+                run_WE_creation_rule(session, queries, last_WEs_creation_time)
+                last_WEs_creation_time = new_WEs_creation_time
+            print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
+            pages = []
+            links = []
+            batchsize = 0
+            t = time()
+    load_pages_batch(session, queries, pages, links, WECR_regexps=WECR_regexps)
+    if not WECR_regexps:
+        run_WE_creation_rule(session, queries, last_WEs_creation_time)
+    print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
 
 
 if __name__ == "__main__":
     # Load config
     try:
-        from config import neo4j_conf, mongo_conf, lrus_batch_size
+        from config import neo4j_conf, mongo_conf, lrus_batch_size, WECR_method
     except:
         sys.stderr.write("ERROR: please create & fill config.py "
                          "from config.py.example first")
@@ -315,8 +258,12 @@ if __name__ == "__main__":
         # ResetDB
         if len(sys.argv) > 1:
             init_neo4j(session, queries)
-        init_WE_creation_rule(session, queries)
-        #load_pages_batch_refactoWECR(session, queries)
-        load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_size)
-        #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
+        if WECR_method == "onindex":
+            WECR_regexps = init_WE_creation_rules(session, queries)
+        else:
+            WECR_regexps = {}
+        # Load dummy test data
+        #load_pages_batch(session, queries, WECR_regexps=WECR_regexps)
+        # Load corpus from MongoDB pages
+        load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_regexps)
 
