@@ -18,7 +18,9 @@ TEST_DATA = {
     [
       "s:http|h:fr|h:sciences-po|h:medialab|p:projets|",
       "s:http|h:com|h:twitter|p:medialab_ScPo|",
-      "s:http|h:com|h:twitter|p:paulanomalie|"
+      "s:http|h:com|h:twitter|p:paulanomalie|",
+      "s:http|h:fr|h:sciences-po|h:www|p:bibliotheque|",
+      "s:https|h:com|h:twitter|"
     ],
     {
       "encoding": "utf-8",
@@ -33,8 +35,14 @@ TEST_DATA = {
      "s:http|h:fr|h:sciences-po|h:medialab|p:projets|"],
     ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
      "s:http|h:com|h:twitter|p:medialab_ScPo|"],
+    ["s:http|h:fr|h:sciences-po|h:www|p:bibliotheque|",
+     "s:http|h:com|h:twitter|"],
     ["s:http|h:fr|h:sciences-po|h:medialab|p:people|",
-     "s:http|h:com|h:twitter|p:paulanomalie|"]
+     "s:http|h:com|h:twitter|p:paulanomalie|"],
+    ["s:http|h:com|h:twitter|p:paulanomalie|",
+     "s:https|h:com|h:twitter|"],
+    ["s:http|h:com|h:twitter|p:paulanomalie|",
+     "s:https|h:com|h:twitter|"]
   ],
   "WECRs": [
     {'prefix': '', 'pattern': 'domain'},
