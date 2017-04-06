@@ -150,7 +150,7 @@ def create_webentities(lrus):
                          webentities=webentities)
     print(result._summary.counters.__dict__)
 
-def load_pages_batch(session, queries, pages=[], links=[], WECR_regexps={}):
+def load_pages_batch(session, queries, pages=[], links=[], WECR_regexps={}, last_WEs_creation_time=None):
     if not pages:
         pages = TEST_DATA["pages"]
     if not links:
@@ -169,6 +169,7 @@ def load_pages_batch(session, queries, pages=[], links=[], WECR_regexps={}):
     print(results._summary.counters.__dict__)
 
     # web entities
+    new_WEs_creation_time = time()
     if WECR_regexps:
         wetocreate = []
         for r in results.records():
@@ -178,10 +179,15 @@ def load_pages_batch(session, queries, pages=[], links=[], WECR_regexps={}):
             except AttributeError:
                 print "WARNING: error on applying WECR ", WECR_regexps[r['prefix']+r['pattern']], "on", r['lru']
         create_webentities(wetocreate)
+    else:
+        run_WE_creation_rule(session, queries, last_WEs_creation_time)
 
     # links
     linkscreation = write_query(session, queries["index_links"], links=links)
     print(linkscreation._summary.counters.__dict__)
+
+    return new_WEs_creation_time
+
 
 def duration(t, minutes=False):
     t1 = time() - t
@@ -198,8 +204,7 @@ def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_r
     donepages = 0
     t0 = time()
     t = time()
-    if not WECR_regexps:
-        last_WEs_creation_time = 0
+    last_WECR_time = 0
     for page in mongoconn.find({}, sort=[("_job", 1)]):
         pages.append((
           page["lru"],
@@ -213,19 +218,13 @@ def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_r
         batchsize += len(page["lrulinks"]) + 1
         totalsize += len(page["lrulinks"]) + 1
         if batchsize >= lrus_batch_size:
-            load_pages_batch(session, queries, pages, links, WECR_regexps=WECR_regexps)
-            if not WECR_regexps:
-                new_WEs_creation_time = time()
-                run_WE_creation_rule(session, queries, last_WEs_creation_time)
-                last_WEs_creation_time = new_WEs_creation_time
+            last_WECR_time = load_pages_batch(session, queries, pages, links, WECR_regexps=WECR_regexps, last_WEs_creation_time=last_WECR_time)
             print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
             pages = []
             links = []
             batchsize = 0
             t = time()
-    load_pages_batch(session, queries, pages, links, WECR_regexps=WECR_regexps)
-    if not WECR_regexps:
-        run_WE_creation_rule(session, queries, last_WEs_creation_time)
+    load_pages_batch(session, queries, pages, links, WECR_regexps=WECR_regexps, last_WEs_creation_time=last_WECR_time)
     print "TOTAL done:", donepages, "/", totalsize, "this batch:", batchsize, "IN:", duration(t), "s", "/", duration(t0, 1), "min"
 
 
@@ -263,7 +262,7 @@ if __name__ == "__main__":
         else:
             WECR_regexps = {}
         # Load dummy test data
-        #load_pages_batch(session, queries, WECR_regexps=WECR_regexps)
+        load_pages_batch(session, queries, WECR_regexps=WECR_regexps, last_WEs_creation_time=0)
         # Load corpus from MongoDB pages
-        load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_regexps)
+        #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_regexps)
 
