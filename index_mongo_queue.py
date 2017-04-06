@@ -232,10 +232,11 @@ def load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_r
 if __name__ == "__main__":
     # Load config
     try:
-        from config import neo4j_conf, mongo_conf, lrus_batch_size, WECR_method
+        from config import (neo4j_conf, mongo_conf, lrus_batch_size,
+                           WECR_method, load_type)
     except:
         sys.stderr.write("ERROR: please create & fill config.py "
-                         "from config.py.example first")
+                         "from config.py.example first\n")
         exit(1)
 
     # MongoDB Connection
@@ -258,12 +259,26 @@ if __name__ == "__main__":
         # ResetDB
         if len(sys.argv) > 1:
             init_neo4j(session, queries, WECR_method)
-        if WECR_method == "onindex":
-            WECR_regexps = init_WE_creation_rules(session, queries)
-        else:
-            WECR_regexps = {}
+        # Build WECRs
+        WECR_regexps = init_WE_creation_rules(session, queries)
+        if load_type == "dummy":
         # Load dummy test data
-        load_pages_batch(session, queries, WECR_regexps=WECR_regexps, last_WEs_creation_time=0)
+            load_pages_batch(
+              session,
+              queries,
+              WECR_regexps=WECR_regexps if WECR_method == "onindex" else {},
+              last_WEs_creation_time=0
+            )
+        elif load_type == "mongo":
         # Load corpus from MongoDB pages
-        #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size, WECR_regexps)
-
+            load_batch_from_mongodb(
+              mongoconn,
+              session,
+              queries,
+              lrus_batch_size,
+              WECR_regexps
+            )
+        else:
+            sys.stderr.write('ERROR: load_type in config.py should be "dummy" '
+                             'or "mongo"\n')
+            exit(1)
