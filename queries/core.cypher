@@ -213,6 +213,16 @@ MATCH (source:WebEntity)<-[:PREFIX]-(:Stem)<-[:PARENT*0..]-(:Stem)-[:LINK]->(:Pa
 WHERE source <> target
 RETURN source, target, count(*) AS weight;
 
+// name: get_webentity_links_v5
+MATCH (page:Page)<-[:PARENT*0..]-(:Stem)-[:PREFIX]->(we:WebEntity)
+WITH collect([page.lru, we.name]) AS pairs
+WITH apoc.map.fromPairs(pairs) AS map
+
+MATCH (sourcePage:Page)-[:LINK]->(targetPage:Page)
+WITH map[sourcePage.lru] AS source, map[targetPage.lru] AS target
+WHERE source <> target
+RETURN source, target, count(*) AS weight;
+
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
