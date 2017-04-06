@@ -23,6 +23,10 @@ def clean_lru(lru):
     ]) + "|"
 
 def get_alt_prefixes(lru):
+    # handle prefix of default WECR
+    if not lru:
+        return [lru]
+
     stems = split_lru_in_stems(lru)
     schemes = [s for s in stems if s[0] == 's']
     hosts = [s  for s in stems if s[0] == 'h']

@@ -39,11 +39,8 @@ TEST_DATA = {
   "WECRs": [
     {'prefix': '', 'pattern': 'domain'},
     {'prefix': 's:http|h:com|h:twitter|', 'pattern': 'path-1'},
-    {'prefix': 's:https|h:com|h:twitter|', 'pattern': 'path-1'},
     {'prefix': 's:http|h:com|h:facebook|', 'pattern': 'path-1'},
-    {'prefix': 's:https|h:com|h:facebook|', 'pattern': 'path-1'},
     {'prefix': 's:http|h:com|h:linkedin|', 'pattern': 'path-2'},
-    {'prefix': 's:https|h:com|h:linkedin|', 'pattern': 'path-2'}
   ]
 }
 
@@ -105,13 +102,13 @@ def prepare_lrus(lru, lruLinks, crawlMetas={}):
     return lrus
 
 def init_WE_creation_rules(session, queries, rules=[]):
-    # default rule
     if not rules:
         rules = TEST_DATA["WECRs"]
-   # prepare regexp for creation rules in runtime
-    WECR_regexps = {r['prefix'] + r['pattern']: re.compile(getPreset(r['pattern'], r['prefix'])) for r in rules}
-    write_query(session, queries["index_lrus"],lrus = [lru_to_stemnodes(r["prefix"]) for r in rules if r["prefix"]!=""])
-    write_query(session, queries["create_wecreationrules"], rules=rules)
+    extended_rules = [{"prefix": prefix, "pattern": r["pattern"]} for r in rules for prefix in get_alt_prefixes(r["prefix"])]
+   # precompile regexps for creation rules in runtime
+    WECR_regexps = {r["prefix"] + r["pattern"]: re.compile(getPreset(r["pattern"], r["prefix"])) for r in extended_rules}
+    write_query(session, queries["index_lrus"],lrus = [lru_to_stemnodes(r["prefix"]) for r in extended_rules if r["prefix"]])
+    write_query(session, queries["create_wecreationrules"], rules=extended_rules)
     return WECR_regexps
 
 def run_WE_creation_rule(session, queries, lastcheck):
