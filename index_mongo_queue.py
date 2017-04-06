@@ -114,7 +114,9 @@ def init_WE_creation_rules(session, queries, rules=[]):
 def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_apply_creation_rule"],
                              lastcheck=lastcheck)
-    lrus = next(we_prefixes.records())["lrus"]
+    #lrus = next(we_prefixes.records())["lrus"]
+    lrus = [r['lru'] for r in we_prefixes.records()]
+
     webentities = []
     lrusToCreate = []
     for lru in lrus:

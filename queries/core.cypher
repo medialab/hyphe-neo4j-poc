@@ -177,11 +177,11 @@ with we, prefixes
 UNWIND prefixes as prefixe
 with we,prefixe
 MATCH (s:Stem {lru:prefixe})
-WHERE NOT (s)-[:PREFIX]->()
+WHERE NOT (s)-[:PREFIX]->(:WebEntity)
 CREATE (we)<-[:PREFIX]-(s);
 
 // name: get_webentity_links
-MATCH (we:WebEntity)<-[:PREFIX]-(:Stem)<-[rels:PARENT*0..]-(p:Page)
+MATCH (we:WebEntity)<-[:PREFIX]-(:Stem)<-[rels:PARENT*0..]-(p:Stem)
 WHERE ALL(s IN extract(rel in rels | endNode(rel)) WHERE NOT (s)-[:PREFIX]->(:WebEntity))
 MATCH (p)-[l:LINK]->(:Page)-[:PARENT*0..]->(:Stem)-[:PREFIX]->(twe:WebEntity)
 WHERE twe <> we
@@ -241,7 +241,7 @@ WHERE (h.type = 'Scheme' OR h.type = 'Port') AND
 NOT (s)-[:PREFIX]->(:WebEntity) AND
 s.createdTimestamp > $lastcheck
 RETURN s.lru as lru
-UNION ALL
+UNION
 MATCH (:WebEntityCreationRule {pattern:'domain'})
       <-[:PREFIX]-(p:Stem)
       <-[:PARENT*0..2]-(h:Stem)
@@ -251,7 +251,7 @@ NOT (s)-[:PREFIX]->(:WebEntity) AND
 NOT (s)<-[:PARENT]-(:Stem {type:'Host'}) AND
 s.createdTimestamp > $lastcheck
 RETURN s.lru as lru
-UNION ALL
+UNION
 MATCH (wecr:WebEntityCreationRule {pattern:'path-1'})
       <-[:PREFIX]-(p:Stem)
       <-[:PARENT*0..]-(h:Stem)
@@ -260,7 +260,7 @@ WHERE (h.type = 'Scheme' OR h.type = 'Port' OR h.type = 'Host') AND
 NOT (s)-[:PREFIX]->(:WebEntity) AND
 s.createdTimestamp > $lastcheck
 RETURN s.lru as lru
-UNION ALL
+UNION
 MATCH (wecr:WebEntityCreationRule {pattern:'path-2'})
       <-[:PREFIX]-(p:Stem)
       <-[:PARENT*0..]-(h:Stem)
@@ -269,3 +269,5 @@ WHERE (h.type = 'Scheme' OR h.type = 'Port' OR h.type = 'Host') AND
 NOT (s)-[:PREFIX]->(:WebEntity) AND
 s.createdTimestamp > $lastcheck
 RETURN s.lru as lru
+
+
