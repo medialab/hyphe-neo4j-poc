@@ -107,13 +107,15 @@ FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END 
   MERGE (a)<-[:PARENT]-(b)
 )
 WITH lru, tuple
-MATCH (a:Stem {lru: tuple.first.lru})-[:PREFIX]->(wecr:WebEntityCreationRule)
+MATCH (a:Stem {lru: tuple.first.lru})-[:PREFIX]->(wecr)
+WHERE wecr:WebEntityCreationRule OR wecr:WebEntity
 WITH lru, reduce( maxStem = {lru:'', depth:0}, 
                  stem IN COLLECT({depth: size(a.lru),pattern: wecr.pattern, prefix:wecr.prefix}) |
                  CASE WHEN stem.depth >= maxStem.depth
                  THEN stem 
                  ELSE maxStem END)
                  AS wecr
+WHERE wecr.pattern IS NOT NULL AND wecr.prefix IS NOT NULL
 RETURN DISTINCT lru, wecr.pattern as pattern, wecr.prefix as prefix;
 
 // name: index_links
