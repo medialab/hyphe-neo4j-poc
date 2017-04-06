@@ -109,10 +109,10 @@ FOREACH (_ IN CASE WHEN coalesce(tuple.second.page, false) THEN [1] ELSE [] END 
 WITH lru, tuple
 MATCH (a:Stem {lru: tuple.first.lru})-[:PREFIX]->(wecr)
 WHERE wecr:WebEntityCreationRule OR wecr:WebEntity
-WITH lru, reduce( maxStem = {lru:'', depth:0}, 
+WITH lru, reduce( maxStem = {lru:'', depth:0},
                  stem IN COLLECT({depth: size(a.lru),pattern: wecr.pattern, prefix:wecr.prefix}) |
                  CASE WHEN stem.depth >= maxStem.depth
-                 THEN stem 
+                 THEN stem
                  ELSE maxStem END)
                  AS wecr
 WHERE wecr.pattern IS NOT NULL AND wecr.prefix IS NOT NULL
@@ -126,7 +126,7 @@ CREATE (a)-[:LINK]->(b);
 
 // name: we_default_creation_rule
 MATCH (s:Stem)
-WHERE 
+WHERE
   s.createdTimestamp > $lastcheck AND
   NOT ((s)-[:PREFIX]->(:WebEntity)) AND
   (
@@ -187,11 +187,25 @@ MATCH (p)-[l:LINK]->(:Page)-[:PARENT*0..]->(:Stem)-[:PREFIX]->(twe:WebEntity)
 WHERE twe <> we
 RETURN DISTINCT id(we) as Source, we.name as Source_label, id(twe) as Target, twe.name as Target_label, count(l) as weight;
 
+// name: get_webentity_links_v2
+MATCH (source:WebEntity)<-[:PREFIX]-(:Stem)<-[:PARENT*0..]-(stem:Stem)
+WHERE (stem)-[:PREFIX]->(source) OR NOT (stem)-[:PREFIX]->(:WebEntity)
+WITH source, stem AS sourcePage
+WHERE sourcePage:Page
+
+MATCH (sourcePage)-[:LINK]->(targetPage:Page)
+MATCH path=shortestPath((targetPage)-[:PARENT*0..]->(targetStem:Stem))
+WHERE (targetStem)-[:PREFIX]->(:WebEntity)
+WITH source, path, targetStem
+MATCH (targetStem)-[:PREFIX]->(target:WebEntity)
+WHERE source <> target
+RETURN source, target, count(path) AS weight;
+
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
 WITH stems, reduce( maxStem = {lru:'', depth:0}, stem IN extract(stem in stems | {depth:size(stem.lru),lru:stem.lru}) | CASE WHEN stem.depth >= maxStem.depth THEN stem ELSE maxStem END) AS pointer, lru
 WITH extract(n IN range(1, size(stems) - 1) | {first: stems[n - 1], second: stems[n]}) AS tuples, pointer, lru
 UNWIND tuples AS tuple
-with lru, pointer, collect(tuple) as _ 
+with lru, pointer, collect(tuple) as _
 RETURN lru, pointer
