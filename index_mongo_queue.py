@@ -112,7 +112,7 @@ def init_WE_creation_rules(session, queries, rules=[]):
     return WECR_regexps
 
 def run_WE_creation_rule(session, queries, lastcheck):
-    we_prefixes = read_query(session, queries["we_default_creation_rule"],
+    we_prefixes = read_query(session, queries["we_apply_creation_rule"],
                              lastcheck=lastcheck)
     lrus = next(we_prefixes.records())["lrus"]
     webentities = []
