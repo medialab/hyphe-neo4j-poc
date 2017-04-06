@@ -40,9 +40,9 @@ TEST_DATA = {
     {'prefix': '', 'pattern': 'domain'},
     {'prefix': 's:http|h:com|h:twitter|', 'pattern': 'path-1'},
     {'prefix': 's:https|h:com|h:twitter|', 'pattern': 'path-1'},
+    {'prefix': 's:http|h:com|h:facebook|', 'pattern': 'path-1'},
     {'prefix': 's:https|h:com|h:facebook|', 'pattern': 'path-1'},
-    {'prefix': 's:https|h:com|h:facebook|', 'pattern': 'path-1'},
-    {'prefix': 's:https|h:com|h:linkedin|', 'pattern': 'path-2'},
+    {'prefix': 's:http|h:com|h:linkedin|', 'pattern': 'path-2'},
     {'prefix': 's:https|h:com|h:linkedin|', 'pattern': 'path-2'}
   ]
 }
@@ -53,11 +53,12 @@ def write_query(session, query, **kwargs):
 def read_query(session, query, **kwargs):
     return session.read_transaction(lambda tx: tx.run(query, **kwargs))
 
-def init_neo4j(session, queries):
+def init_neo4j(session, queries, WECR_method):
     write_query(session, queries["drop_db"])
     write_query(session, queries["constrain_lru"])
-    #write_query(session, queries["stem_timestamp_index"])
-    #write_query(session, queries["stem_type_index"])
+    if WECR_method == "afterindex":
+        write_query(session, queries["stem_timestamp_index"])
+        write_query(session, queries["stem_type_index"])
     write_query(session, queries["create_root"])
 
 stemTypes = {
@@ -256,7 +257,7 @@ if __name__ == "__main__":
     with neo4jdriver.session() as session:
         # ResetDB
         if len(sys.argv) > 1:
-            init_neo4j(session, queries)
+            init_neo4j(session, queries, WECR_method)
         if WECR_method == "onindex":
             WECR_regexps = init_WE_creation_rules(session, queries)
         else:
