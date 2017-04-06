@@ -107,7 +107,12 @@ def load_pages_batch_refactoWECR(session, queries, pages=[], links=[]):
     print(results._summary.counters.__dict__)
     wetocreate = []
     for r in results.records():
-      wetocreate.append(CREATION_RULES_REGEXP[r['prefix']+r['pattern']].match(r['lru']).group(1))
+        try:
+            we = CREATION_RULES_REGEXP[r['prefix']+r['pattern']].match(r['lru']).group(1)
+            wetocreate.append(we)
+        except Exception as e:
+            print type(e), e
+            print "WARNING: error on applying WECR ", CREATION_RULES_REGEXP[r['prefix']+r['pattern']], "on", r['lru']
     # links
     a = write_query(session, queries["index_links"], links=links)
     print(a._summary.counters.__dict__)
@@ -272,7 +277,7 @@ def init_WE_creation_rule(session, queries):
   # default rule
   rules =[
     {'prefix':'','pattern':'domain'},
-    {'prefix':'s:http|h:com|h:twitter|','pattern':'path-1'} 
+    {'prefix':'s:http|h:com|h:twitter|','pattern':'path-1'}
   ]
   # prepare regexp for creation rules in runtime
   for r in rules:
@@ -314,4 +319,4 @@ if __name__ == "__main__":
         #load_pages_batch_refactoWECR(session, queries)
         load_batch_from_mongodb_refactoWECR(mongoconn, session, queries, lrus_batch_size)
         #load_batch_from_mongodb(mongoconn, session, queries, lrus_batch_size)
-        
+
