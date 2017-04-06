@@ -208,6 +208,11 @@ WHERE
   (source)<-[:PREFIX]-(:Stem)<-[:PARENT*0..]-(:Stem)-[:LINK]->(:Page)-[:PARENT*0..]->(:Stem)-[:PREFIX]->(target)
 RETURN source, target;
 
+// name: get_webentity_links_v4
+MATCH (source:WebEntity)<-[:PREFIX]-(:Stem)<-[:PARENT*0..]-(:Stem)-[:LINK]->(:Page)-[:PARENT*0..]->(:Stem)-[:PREFIX]->(target:WebEntity)
+WHERE source <> target
+RETURN source, target, count(*) AS weight;
+
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
