@@ -16,7 +16,7 @@ CREATE INDEX ON :Stem(type);
 
 // name: create_root
 // Startup query creating basic nodes such as the ROOT.
-MERGE (:Stem {lru: "", stem: "ROOT"});
+MERGE (:Stem:Corpus {lru: "", stem: "ROOT"});
 
 // name: index_lrus
 // Indexing a batch of LRUs represented as lists of stems.
