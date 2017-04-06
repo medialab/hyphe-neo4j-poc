@@ -236,6 +236,16 @@ WITH map[sourcePage.lru] AS source, map[targetPage.lru] AS target
 WHERE source <> target
 RETURN source, target, count(*) AS weight;
 
+// name: get_webentity_links_v6
+MATCH (source:Page)
+WITH source
+MATCH path = (source)-[:PARENT|:PREFIX*1..]->(weSource:WebEntity)
+WITH source, last(collect(last(nodes(path)))) AS weSource
+MATCH (source)-[:LINK]->(target:Page)
+MATCH path = (target)-[:PARENT|:PREFIX*1..]->(weTarget:WebEntity)
+WITH target, weSource, last(collect(last(nodes(path)))) AS weTarget
+RETURN weSource.name, weTarget.name, count(*) AS weight;
+
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
