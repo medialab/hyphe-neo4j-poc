@@ -236,6 +236,7 @@ WITH map[sourcePage.lru] AS source, map[targetPage.lru] AS target
 WHERE source <> target
 RETURN source, target, count(*) AS weight;
 
+<<<<<<< HEAD
 // name: get_webentity_links_v7
 // Started streaming 25365 records after 376402 ms and completed after 376594 ms,
 MATCH (source:WebEntity)<-[:PREFIX]-(:Stem)<-[:PARENT*0..]-(stem:Stem)
@@ -247,6 +248,17 @@ WITH source,targetPage
 MATCH p=(targetPage)-[:PARENT|:PREFIX*1..]->(we:WebEntity)
 WITH source,targetPage,reduce(we = null , path in collect({length:length(p), we:we})| CASE WHEN we IS NULL OR we.length>=path.length THEN path ELSE we END).we as target
 RETURN source,target, count(targetPage)
+=======
+// name: get_webentity_links_v6
+MATCH (source:Page)
+WITH source
+MATCH path = (source)-[:PARENT|:PREFIX*1..]->(weSource:WebEntity)
+WITH source, last(collect(last(nodes(path)))) AS weSource
+MATCH (source)-[:LINK]->(target:Page)
+MATCH path = (target)-[:PARENT|:PREFIX*1..]->(weTarget:WebEntity)
+WITH target, weSource, last(collect(last(nodes(path)))) AS weTarget
+RETURN weSource.name, weTarget.name, count(*) AS weight;
+>>>>>>> f94f60456300526cd10f44715a490d90f4007bf8
 
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
