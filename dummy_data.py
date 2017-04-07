@@ -1,3 +1,4 @@
+from time import time
 TEST_DATA = {
   "pages": [(
     "s:http|h:fr|h:sciences-po|h:medialab|p:people|",
