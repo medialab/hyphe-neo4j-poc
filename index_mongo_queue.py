@@ -48,7 +48,11 @@ TEST_DATA = {
     {'prefix': '', 'pattern': 'domain'},
     {'prefix': 's:http|h:com|h:twitter|', 'pattern': 'path-1'},
     {'prefix': 's:http|h:com|h:facebook|', 'pattern': 'path-1'},
-    {'prefix': 's:http|h:com|h:linkedin|', 'pattern': 'path-2'},
+    {'prefix': 's:http|h:com|h:linkedin|', 'pattern': 'path-2'}
+  ],
+  "manual_webentities": [
+    "s:http|h:fr|h:sciences-po|h:medialab|",
+    "s:http|h:fr|h:sciences-po|h:medialab|h:tools|"
   ]
 }
 
@@ -115,9 +119,19 @@ def init_WE_creation_rules(session, queries, rules=[]):
     extended_rules = [{"prefix": prefix, "pattern": r["pattern"]} for r in rules for prefix in get_alt_prefixes(r["prefix"])]
    # precompile regexps for creation rules in runtime
     WECR_regexps = {r["prefix"] + r["pattern"]: re.compile(getPreset(r["pattern"], r["prefix"])) for r in extended_rules}
-    write_query(session, queries["index_lrus"],lrus = [lru_to_stemnodes(r["prefix"]) for r in extended_rules if r["prefix"]])
+    write_query(session, queries["index_lrus"], lrus=[lru_to_stemnodes(r["prefix"]) for r in extended_rules if r["prefix"]])
     write_query(session, queries["create_wecreationrules"], rules=extended_rules)
     return WECR_regexps
+
+def define_webentities(session, queries, lrus=[]):
+    if not lrus:
+        lrus = TEST_DATA["manual_webentities"]
+    wes = [{
+      "name": name_lru(lru),
+      "prefixes": get_alt_prefixes(lru)
+    } for lru in lrus]
+    write_query(session, queries["index_lrus"], lrus=[lru_to_stemnodes(l) for lru in lrus for l in get_alt_prefixes(lru)])
+    write_query(session, queries["create_wes"], webentities=wes)
 
 def run_WE_creation_rule(session, queries, lastcheck):
     we_prefixes = read_query(session, queries["we_apply_creation_rule"],
@@ -271,6 +285,7 @@ if __name__ == "__main__":
         WECR_regexps = WECR_regexps if WECR_method == "onindex" else {}
         if load_type == "dummy":
         # Load dummy test data
+            define_webentities(session, queries)
             load_pages_batch(
               session,
               queries,
