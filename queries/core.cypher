@@ -272,6 +272,16 @@ ORDER BY length(path) ASC
 WITH sourcePage, targetPage, sourceWe, head(collect(last(nodes(path)))) AS targetWe, weight
 RETURN sourceWe.name, targetWe.name, sum(weight) AS weight;
 
+// name: get_webentity_links_v9
+// Started streaming 25236 records after 363199 ms and completed after 363608 ms
+MATCH p=(weSource:WebEntity)<-[:PREFIX]-(:Stem)<-[:PARENT*0..]-(sourcePage:Page)
+WITH sourcePage, reduce(we = null , path in collect({length:length(p), we:weSource})| CASE WHEN we IS NULL OR we.length>=path.length THEN path ELSE we END).we as weSource
+MATCH (sourcePage)-[:LINK]->(targetPage:Page)
+WITH weSource,sourcePage,targetPage, count(*) as weight
+MATCH p=(targetPage)-[:PARENT*0..]->(:Stem)-[:PREFIX]->(we:WebEntity)
+WITH weSource,targetPage,reduce(we = null , path in collect({length:length(p), we:we})| CASE WHEN we IS NULL OR we.length>=path.length THEN path ELSE we END).we as weTarget, weight
+RETURN weSource.name as Source,weTarget.name as Target, sum(weight) as Weight
+
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
