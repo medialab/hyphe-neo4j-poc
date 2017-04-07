@@ -3,6 +3,15 @@
 
 import re, urllib
 
+stemTypes = {
+  "s": "Scheme",
+  "h": "Host",
+  "t": "Port",
+  "p": "Path",
+  "q": "Query",
+  "f": "Fragment"
+}
+
 lruStems = re.compile(r'(?:^|\|)([shtpqf]):')
 special_hosts = re.compile(r'localhost|(\d{1,3}\.){3}\d{1,3}|\[[\da-f]*:[\da-f:]*\]', re.I)
 re_host_trailing_slash = re.compile(r'(h:[^\|]*)\|p:\|?$')
@@ -83,6 +92,19 @@ def name_lru(lru):
         host = [lasthost]
     return ".".join(host) + path + name
 
+def lru_to_stemnodes(lru):
+    stems = []
+    lru = clean_lru(lru)
+    sublru = ""
+    for typ, val, stem in split_lru_in_stems(lru):
+        sublru += stem + "|"
+        stems.append({
+          "lru": sublru,
+          "type": stemTypes[typ],
+          "stem": val
+        })
+    stems[-1]["page"] = True
+    return stems
 
 
 if __name__ == "__main__":
