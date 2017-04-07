@@ -194,6 +194,7 @@ if __name__ == "__main__":
         )
     elif load_type == "mongo":
     # Load corpus from MongoDB pages
+        define_webentities(neo4j)
         load_batch_from_mongodb(
           mongoconn,
           neo4j,
