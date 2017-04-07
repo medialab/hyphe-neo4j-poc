@@ -1,73 +1,73 @@
-CORPUS axa 10ème
+# CORPUS axa 10ème
 
-# nb webentity :
+## nb webentity :
 - legacy: 20003 
 - neo: 17069 
-- jacomyTree:   
+- jacomyTree: 15254
 
-# nb links:
-- hyphe: 
-- neo:
+## nb links:
+- hyphe: 5 395 253
+- neo: 8 666 121
 - jacomyTree:
 
-# nb pages:
-- hyphe: 
-- neo: 612639
+## nb pages:
+- hyphe: 1 840 377
+- neo: 612 639
 - jacomyTree:
 
-# webEntity links :
+## webEntity links :
 - hyphe: 30490
 - neo: 27815
-- jacomyTree:
+- jacomyTree: 27100
 
-# generation we links time: 
+## generation we links time: 
 - hyphe: 45m
 - neo : 6,72m
-- jacomyTree:
-
-# indexation time:
+- jacomyTree: 1m35s
+ 
+## indexation time:
 - hyphe: 115m
 - neo : 64m
-- jacomyTree:
+- jacomyTree: 16m7s
 
-# diskSpace :
+## diskSpace :
 - hyphe: 740Mo
 - neo: 1,5Go
-- jacomyTree:
+- jacomyTree: 1Go
 
-CORPUS testneo
+# CORPUS testneo
 
-# nb webentity :
+## nb webentity :
 - Hyphe: 1464 
-- Hyphe: 1446
-- jacomyTree:
+- neo: 1446
+- jacomyTree: 1293
 
-# nb links:
-- hyphe: 51961
+## nb links:
+- hyphe: 99474
 - neo: 157913
-- jacomyTree:
+- jacomyTree: 
 
-# nb pages:
-- hyphe: 36877
+## nb pages:
+- hyphe: 51637
 - neo: 16085
 - jacomyTree:
 
-# webEntity links :
+## webEntity links :
 - hyphe: 1651
 - neo: 1628
-- jacomyTree:
+- jacomyTree: 1622
 
-# generation we links time: 
+## generation we links time: 
 - neo: 7,6s
 - hyphe: 30,37s 
-- jacomyTree:
+- jacomyTree: 3s
 
-# indexation time:
+## indexation time:
 - hyphe: 3m07s
 - neo : 1m34s
-- jacomyTree:
+- jacomyTree: 14s
 
-# diskSpace :
+## diskSpace :
 - hyphe: 14Mo
 - neo: 191Mo
-- jacomyTree:
+- jacomyTree: 19Mo
