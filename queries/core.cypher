@@ -282,6 +282,12 @@ MATCH p=(targetPage)-[:PARENT*0..]->(:Stem)-[:PREFIX]->(we:WebEntity)
 WITH weSource,targetPage,reduce(we = null , path in collect({length:length(p), we:we})| CASE WHEN we IS NULL OR we.length>=path.length THEN path ELSE we END).we as weTarget, weight
 RETURN weSource.name as Source,weTarget.name as Target, sum(weight) as Weight
 
+// name: get_webentity_links_v10
+MATCH (source:Page)-[:LINK]->(target:Page)
+CALL hyphe.traverse(source) YIELD node AS sourceWe
+CALL hyphe.traverse(target) YIELD node AS targetWe
+RETURN sourceWe.name, targetWe.name;
+
 // name: dump
 UNWIND [[{s:'a',lru:'a'},{s:'b',lru:'a:b'}],[{s:'a',lru:'a'},{s:'b',lru:'a:b'},{s:'c',lru:'a:b:c'}]] AS stems
 WITH [{lru:''}] + stems AS stems, stems[size(stems)-1].lru as lru
