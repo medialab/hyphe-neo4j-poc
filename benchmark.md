@@ -8,12 +8,12 @@
 ## nb links:
 - hyphe: 5 395 253
 - neo: 8 666 121
-- jacomyTree:
+- jacomyTree: 4 602 024
 
 ## nb pages:
 - hyphe: 1 840 377
 - neo: 612 639
-- jacomyTree:
+- jacomyTree: 643 55 (LRUs)
 
 ## webEntity links :
 - hyphe: 30490
